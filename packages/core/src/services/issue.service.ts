@@ -1,4 +1,6 @@
 import { Prisma } from '@agentpm/db';
+import { emitWebhook } from './webhook.service.js';
+import { issueAudience, notify, projectAdmins } from './notification.service.js';
 import {
   AppError,
   type ClaimIssueInput,
@@ -151,6 +153,17 @@ export async function createIssue(
     action: 'issue.created',
     summary: `创建 ${created.issueKey}（${created.type}）${created.title}`,
     detail: { type: created.type, priority: created.priority, fingerprint: created.fingerprint },
+  });
+  emitWebhook(ctx, 'issue.created', {
+    projectKey: project.key,
+    issueKey: created.issueKey,
+    type: created.type,
+    title: created.title,
+  });
+  await notify(ctx, [created.assigneeId], 'issue.assigned', {
+    projectKey: project.key,
+    issueKey: created.issueKey,
+    title: created.title,
   });
   return getIssueOr404(ctx, created.issueKey);
 }
@@ -364,6 +377,19 @@ export async function transitionIssue(
       summary: `agent 请求将 ${issueKey} 流转为 ${toStateName}（待审批）`,
       detail: { approvalId: approval.id, actionType: 'issue.transition' },
     });
+    emitWebhook(ctx, 'approval.requested', {
+      projectKey: project.key,
+      actionType: 'issue.transition',
+      approvalId: approval.id,
+      issueKey,
+      toState: toStateName,
+    });
+    await notify(ctx, await projectAdmins(ctx, issue.projectId), 'approval.requested', {
+      projectKey: project.key,
+      actionType: 'issue.transition',
+      issueKey,
+      toState: toStateName,
+    });
     return {
       status: 'pending_approval',
       approvalId: approval.id,
@@ -391,6 +417,22 @@ export async function transitionIssue(
     summary: `${issueKey}: ${issue.state.name} → ${toStateName}`,
     detail: { from: issue.state.name, to: toStateName },
   });
+  emitWebhook(ctx, 'issue.transitioned', {
+    projectKey: (
+      await ctx.db.project.findUniqueOrThrow({
+        where: { id: issue.projectId },
+        select: { key: true },
+      })
+    ).key,
+    issueKey,
+    from: issue.state.name,
+    to: toStateName,
+    stateCategory: target.category,
+  });
+  if (target.category === 'DONE' && !wasDone) {
+    const audience = await issueAudience(ctx, issue);
+    await notify(ctx, audience, 'issue.completed', { issueKey, title: issue.title });
+  }
   return {
     status: 'done',
     issue: serializeIssue(await getIssueOr404(ctx, updated.issueKey)),
@@ -417,6 +459,17 @@ export async function assignIssue(ctx: Ctx, issueKey: string, assigneeName: stri
     action: 'issue.assigned',
     summary: `${issueKey} 指派给 ${assigneeName ?? '（取消指派）'}`,
   });
+  emitWebhook(ctx, 'issue.assigned', {
+    projectKey: (
+      await ctx.db.project.findUniqueOrThrow({
+        where: { id: issue.projectId },
+        select: { key: true },
+      })
+    ).key,
+    issueKey,
+    assignee: assigneeName,
+  });
+  await notify(ctx, [assigneeId], 'issue.assigned', { issueKey, title: issue.title });
   return serializeIssue(await getIssueOr404(ctx, issueKey));
 }
 
@@ -474,6 +527,11 @@ export async function claimIssue(ctx: Ctx, projectKey: string, input: ClaimIssue
       action: 'task.claimed',
       summary: `${ctx.actorName ?? ctx.actorId} 领取 ${input.issueKey}`,
     });
+    emitWebhook(ctx, 'task.claimed', {
+      projectKey: project.key,
+      issueKey: input.issueKey,
+      assignee: ctx.actorName,
+    });
     return { issue: serializeIssue(await getIssueOr404(ctx, input.issueKey)), contested: false };
   }
 
@@ -507,6 +565,11 @@ export async function claimIssue(ctx: Ctx, projectKey: string, input: ClaimIssue
         action: 'task.claimed',
         summary: `${ctx.actorName ?? ctx.actorId} 领取 ${c.issueKey}`,
         detail: { matchedBy: { type: input.type, label: input.label, q: input.q } },
+      });
+      emitWebhook(ctx, 'task.claimed', {
+        projectKey: project.key,
+        issueKey: c.issueKey,
+        assignee: ctx.actorName,
       });
       return { issue: serializeIssue(await getIssueOr404(ctx, c.issueKey)), contested: false };
     }
@@ -546,6 +609,16 @@ export async function releaseIssue(ctx: Ctx, issueKey: string, reason?: string) 
     issueId: issue.id,
     action: 'task.released',
     summary: `${ctx.actorName ?? ctx.actorId} 释放 ${issueKey}${reason ? `：${reason}` : ''}`,
+  });
+  emitWebhook(ctx, 'task.released', {
+    projectKey: (
+      await ctx.db.project.findUniqueOrThrow({
+        where: { id: issue.projectId },
+        select: { key: true },
+      })
+    ).key,
+    issueKey,
+    reason: reason ?? null,
   });
   return serializeIssue(await getIssueOr404(ctx, issueKey));
 }

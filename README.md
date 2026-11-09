@@ -29,6 +29,7 @@
 - **并发安全的任务领取**（claim/release）：多人多 agent 抢同一个任务，只有一个赢
 - 全文与条件搜索、评论、统一活动流、项目统计
 - **Web UI**（M3）：看板拖拽流转、Backlog、issue 详情（评论/进度/证据）、Agent 管理、审批收件箱、SSE 实时活动流、项目总览驾驶舱
+- **协作与报表**（M4）：Sprint 面板（排期/启停/收尾退回）、**基于审计流重建的燃尽图**与速率、站内通知（铃铛+跳转）、**Webhooks**（HMAC 签名出站事件推送，13 类事件 + 投递日志 + 连通性测试）
 - REST API + 自动生成的 OpenAPI 文档
 
 ### Agent 能力（差异化）
@@ -117,7 +118,7 @@ packages/
 
 ## 路线图
 
-M0–M3（治理 + 核心 API + MCP + Web UI）已完成；M4 协作报表 → M5 **AI PM 替身 + 监控中心** → M6 v0.1 发布。详见 [docs/roadmap.md](./docs/roadmap.md)。
+M0–M4（治理 + 核心 API + MCP + Web UI + 协作报表）已完成；M5 **AI PM 替身 + 监控中心** → M6 v0.1 发布。详见 [docs/roadmap.md](./docs/roadmap.md)。
 
 ## 参与贡献
 

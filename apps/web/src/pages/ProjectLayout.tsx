@@ -1,8 +1,9 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, Navigate, NavLink, Outlet, useParams } from 'react-router-dom';
 import { useApi } from '../api/hooks.js';
 import type { ProjectDetail } from '../api/types.js';
 import { IssueDrawer } from '../components/IssueDrawer.js';
+import { NotificationBell } from '../components/NotificationBell.js';
 import { ErrorText, Spinner } from '../components/ui.js';
 import { useAuth } from '../auth.js';
 
@@ -15,6 +16,7 @@ export interface ProjectPageCtx {
 
 const TABS = [
   { to: '', label: '📋 看板' },
+  { to: 'sprint', label: '🏃 Sprint' },
   { to: 'backlog', label: '📥 Backlog' },
   { to: 'overview', label: '📊 总览' },
   { to: 'activity', label: '⚡ 活动流' },
@@ -22,6 +24,7 @@ const TABS = [
   { to: 'approvals', label: '🔔 审批' },
   { to: 'regressions', label: '🧪 回归' },
   { to: 'members', label: '👥 成员' },
+  { to: 'webhooks', label: '⚙️ Webhooks' },
 ];
 
 export function ProjectLayout() {
@@ -29,6 +32,19 @@ export function ProjectLayout() {
   const { data, loading, error, reload } = useApi<ProjectDetail>(`/v1/projects/${key}`);
   const { me } = useAuth();
   const [drawer, setDrawer] = useState<string | null>(null);
+
+  // 通知点击跳转的握手：事件（同页面即时）+ sessionStorage（跨路由挂载时消费）
+  useEffect(() => {
+    const consume = (issueKey: string | null) => {
+      if (!issueKey) return;
+      sessionStorage.removeItem('apm:openIssue');
+      setDrawer(issueKey);
+    };
+    consume(sessionStorage.getItem('apm:openIssue'));
+    const onOpen = (e: Event) => consume((e as CustomEvent<string>).detail);
+    window.addEventListener('apm:open-issue', onOpen);
+    return () => window.removeEventListener('apm:open-issue', onOpen);
+  }, []);
 
   const reloadAll = useCallback(() => {
     reload();
@@ -71,8 +87,11 @@ export function ProjectLayout() {
             ? '完成需审批'
             : '全自动'}
         </span>
-        <span className="ml-auto text-sm text-slate-500">
-          👤 {me.displayName}（{data.myRole}）
+        <span className="ml-auto flex items-center gap-2">
+          <NotificationBell />
+          <span className="text-sm text-slate-500">
+            👤 {me.displayName}（{data.myRole}）
+          </span>
         </span>
       </header>
 

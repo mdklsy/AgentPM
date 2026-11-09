@@ -43,6 +43,27 @@ export {
   getCurrentSprint,
   listBacklog,
   listSprints,
+  setIssueSprint,
   setSprintStatus,
 } from './services/sprint.service.js';
+export { sprintBurndown, velocity } from './services/burndown.service.js';
+export {
+  issueAudience,
+  listNotifications,
+  markRead,
+  NotificationQuerySchema,
+  notify,
+  projectAdmins,
+} from './services/notification.service.js';
+export {
+  createWebhook,
+  deleteWebhook,
+  emitWebhook,
+  listDeliveries,
+  listWebhooks,
+  pingWebhook,
+  toggleWebhook,
+  verifySignature,
+  WEBHOOK_EVENTS,
+} from './services/webhook.service.js';
 export { projectStats } from './services/stats.service.js';

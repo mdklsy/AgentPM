@@ -1,8 +1,9 @@
-import type { SprintStatus } from '@agentpm/shared';
-import type { CreateSprintInput } from '@agentpm/shared';
+import { AppError, type CreateSprintInput, type SprintStatus } from '@agentpm/shared';
 import type { Ctx } from '../ctx.js';
 import { writeActivity } from './activity.service.js';
+import { getIssueOr404 } from './issue.service.js';
 import { requireProjectMembership } from './project.service.js';
+import { emitWebhook } from './webhook.service.js';
 
 export async function listSprints(ctx: Ctx, projectKey: string) {
   const { project } = await requireProjectMembership(ctx, projectKey);
@@ -81,13 +82,57 @@ export async function setSprintStatus(
   const { project } = await requireProjectMembership(ctx, projectKey, 'ADMIN');
   const sprint = await ctx.db.sprint.findFirst({ where: { id: sprintId, projectId: project.id } });
   if (!sprint) throw new Error('sprint not found');
+
+  let returned = 0;
+  if (status === 'COMPLETED') {
+    // 收尾：未完成 issue 退回 Backlog（sprintId 置空）
+    const moved = await ctx.db.issue.updateMany({
+      where: { sprintId, state: { category: { not: 'DONE' } } },
+      data: { sprintId: null },
+    });
+    returned = moved.count;
+  }
   const updated = await ctx.db.sprint.update({ where: { id: sprintId }, data: { status } });
   await writeActivity(ctx, {
     projectId: project.id,
     action: 'sprint.status_changed',
-    summary: `Sprint ${sprint.name}: ${sprint.status} → ${status}`,
+    summary: `Sprint ${sprint.name}: ${sprint.status} → ${status}${returned ? `（${returned} 个未完成退回 Backlog）` : ''}`,
   });
-  return updated;
+  emitWebhook(ctx, 'sprint.status_changed', {
+    projectKey,
+    sprintId,
+    sprintName: sprint.name,
+    from: sprint.status,
+    to: status,
+    returnedToBacklog: returned,
+  });
+  return { sprint: updated, returnedToBacklog: returned };
+}
+
+/** 把 issue 排入/移出 Sprint。sprintId=null 表示退回 Backlog。 */
+export async function setIssueSprint(ctx: Ctx, issueKey: string, sprintId: string | null) {
+  const issue = await getIssueOr404(ctx, issueKey);
+  const project = await ctx.db.project.findUniqueOrThrow({
+    where: { id: issue.projectId },
+    select: { key: true },
+  });
+  await requireProjectMembership(ctx, project.key, 'MEMBER');
+  let sprintName: string | null = null;
+  if (sprintId) {
+    const sprint = await ctx.db.sprint.findFirst({
+      where: { id: sprintId, projectId: issue.projectId },
+    });
+    if (!sprint) throw AppError.notFound('sprint 不存在', 'SPRINT_NOT_FOUND');
+    sprintName = sprint.name;
+  }
+  await ctx.db.issue.update({ where: { id: issue.id }, data: { sprintId } });
+  await writeActivity(ctx, {
+    projectId: issue.projectId,
+    issueId: issue.id,
+    action: 'issue.sprint_changed',
+    summary: `${issueKey} ${sprintId ? `排入 Sprint ${sprintName}` : '移回 Backlog'}`,
+  });
+  return { issueKey, sprint: sprintName, sprintId };
 }
 
 /** backlog：未排期（无 sprint）且未完成的 issue。 */

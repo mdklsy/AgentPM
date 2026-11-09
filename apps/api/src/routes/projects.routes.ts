@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import {
   AddMemberSchema,
   ApprovalDecisionSchema,
@@ -21,7 +22,11 @@ import {
   projectStats,
   queryActivities,
   removeMember,
+  setIssueSprint,
+  setSprintStatus,
+  sprintBurndown,
   updateProject,
+  velocity,
 } from '@agentpm/core';
 import { requireAuth } from '../plugins/auth.js';
 import { makeCtx } from '../ctx.js';
@@ -118,12 +123,46 @@ export function registerProjectRoutes(app: FastifyApp) {
     return { sprint: await getCurrentSprint(makeCtx(app, req), key) };
   });
 
-  app.post('/v1/projects/:key/sprints', async (req) => {
+  app.post('/v1/projects/:key/sprints', async (req, reply) => {
     requireAuth(req, 'write');
     const { key } = req.params as { key: string };
     const input = CreateSprintSchema.parse(req.body);
     const sprint = await createSprint(makeCtx(app, req), key, input);
-    return { sprint: { id: sprint.id, name: sprint.name, status: sprint.status } };
+    return reply
+      .status(201)
+      .send({ sprint: { id: sprint.id, name: sprint.name, status: sprint.status } });
+  });
+
+  app.patch('/v1/projects/:key/sprints/:id/status', async (req) => {
+    requireAuth(req, 'write');
+    const { key, id } = req.params as { key: string; id: string };
+    const { status } = z
+      .object({ status: z.enum(['PLANNED', 'ACTIVE', 'COMPLETED']) })
+      .parse(req.body);
+    const r = await setSprintStatus(makeCtx(app, req), key, id, status);
+    return {
+      sprint: { id: r.sprint.id, name: r.sprint.name, status: r.sprint.status },
+      returnedToBacklog: r.returnedToBacklog,
+    };
+  });
+
+  app.get('/v1/projects/:key/sprints/:id/burndown', async (req) => {
+    requireAuth(req);
+    const { key, id } = req.params as { key: string; id: string };
+    return sprintBurndown(makeCtx(app, req), key, id);
+  });
+
+  app.get('/v1/projects/:key/velocity', async (req) => {
+    requireAuth(req);
+    const { key } = req.params as { key: string };
+    return velocity(makeCtx(app, req), key);
+  });
+
+  app.post('/v1/issues/:issueKey/sprint', async (req) => {
+    requireAuth(req, 'write');
+    const { issueKey } = req.params as { issueKey: string };
+    const { sprintId } = z.object({ sprintId: z.string().nullable() }).parse(req.body);
+    return setIssueSprint(makeCtx(app, req), issueKey, sprintId);
   });
 
   app.get('/v1/projects/:key/backlog', async (req) => {

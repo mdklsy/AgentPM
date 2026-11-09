@@ -176,3 +176,9 @@ export interface RegressionRunItem {
   finishedAt: string;
   triggeredBy: { name: string; type: ActorType };
 }
+
+export interface BurndownPoint {
+  date: string;
+  remaining: number;
+  ideal: number;
+}

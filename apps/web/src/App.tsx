@@ -14,6 +14,8 @@ import { OverviewPage } from './pages/OverviewPage.js';
 import { ProjectLayout } from './pages/ProjectLayout.js';
 import { ProjectsPage } from './pages/ProjectsPage.js';
 import { RegressionsPage } from './pages/RegressionsPage.js';
+import { SprintPage } from './pages/SprintPage.js';
+import { WebhooksPage } from './pages/WebhooksPage.js';
 
 export function App() {
   const { me, loading, logout } = useAuth();
@@ -46,6 +48,7 @@ export function App() {
       <Route path="/" element={<ProjectsPage />} />
       <Route path="/p/:key" element={<ProjectLayout />}>
         <Route index element={<BoardPage />} />
+        <Route path="sprint" element={<SprintPage />} />
         <Route path="backlog" element={<BacklogPage />} />
         <Route path="overview" element={<OverviewPage />} />
         <Route path="activity" element={<ActivityPage />} />
@@ -53,6 +56,7 @@ export function App() {
         <Route path="approvals" element={<ApprovalsPage />} />
         <Route path="regressions" element={<RegressionsPage />} />
         <Route path="members" element={<MembersPage />} />
+        <Route path="webhooks" element={<WebhooksPage />} />
       </Route>
       <Route
         path="*"

@@ -3,7 +3,9 @@ import type { Ctx } from '../ctx.js';
 import { writeActivity } from './activity.service.js';
 import { fileBugInternal } from './bug.service.js';
 import { transitionIssue } from './issue.service.js';
+import { notify } from './notification.service.js';
 import { requireProjectMembership } from './project.service.js';
+import { emitWebhook } from './webhook.service.js';
 
 /** 审批队列（ADMIN+ 查看；agent 可查看自己发起的）。 */
 export async function listApprovals(
@@ -84,6 +86,19 @@ export async function decideApproval(ctx: Ctx, approvalId: string, input: Approv
     action: 'approval.decided',
     summary: `审批 ${approval.actionType} → ${input.decision}${input.reason ? `：${input.reason}` : ''}`,
     detail: { approvalId, execution },
+  });
+  emitWebhook(ctx, 'approval.decided', {
+    projectKey: approval.project.key,
+    approvalId,
+    actionType: approval.actionType,
+    decision: input.decision,
+    execution,
+  });
+  await notify(ctx, [approval.requestedById], 'approval.decided', {
+    projectKey: approval.project.key,
+    approvalId,
+    decision: input.decision,
+    actionType: approval.actionType,
   });
   return { approvalId, decision: input.decision, execution };
 }

@@ -189,6 +189,7 @@ model Project {
   activities       Activity[]
   regressionRuns   RegressionRun[]
   approvalRequests ApprovalRequest[]
+  webhooks         Webhook[]
 }
 
 model Member {
@@ -505,4 +506,40 @@ model Notification {
   createdAt   DateTime  @default(now())
 
   @@index([recipientId, readAt])
+}
+
+// -------------------------------------------------------------- webhooks
+
+/// 出站 webhook：项目事件以 HMAC-SHA256 签名 POST 到外部 URL（ADR M4）。
+model Webhook {
+  id         String            @id @default(cuid())
+  projectId  String
+  project    Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  url        String            @db.VarChar(1024)
+  /// HMAC 签名密钥；创建时生成或由用户提供，明文存储（自托管单机权衡，可随时轮换）
+  secret     String            @db.VarChar(128)
+  /// 订阅的事件名数组；["*"] = 全部
+  events     Json              @default("[\"*\"]")
+  isActive   Boolean           @default(true)
+  createdById String
+  createdAt  DateTime          @default(now())
+  deliveries WebhookDelivery[]
+
+  @@index([projectId])
+}
+
+/// 每次投递的记录（状态码/耗时/错误），供排障与重放参考。
+model WebhookDelivery {
+  id         String   @id @default(cuid())
+  webhookId  String
+  webhook    Webhook  @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  event      String   @db.VarChar(64)
+  payload    Json
+  ok         Boolean
+  statusCode Int?
+  error      String?  @db.VarChar(512)
+  durationMs Int?
+  createdAt  DateTime @default(now())
+
+  @@index([webhookId, createdAt])
 }

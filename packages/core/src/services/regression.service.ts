@@ -3,6 +3,7 @@ import type { Ctx } from '../ctx.js';
 import { writeActivity } from './activity.service.js';
 import { fileBugInternal, type BugReportResult } from './bug.service.js';
 import { requireProjectMembership } from './project.service.js';
+import { emitWebhook } from './webhook.service.js';
 
 /**
  * 提交回归结果矩阵：
@@ -102,6 +103,13 @@ export async function submitRegression(ctx: Ctx, projectKey: string, input: Regr
       ...counts,
       autoFiled: filedBugs.filter((b) => b.status === 'created').length,
     },
+  });
+  emitWebhook(ctx, 'regression.submitted', {
+    projectKey,
+    runId: run.id,
+    suite: input.suite,
+    status: run.status,
+    counts,
   });
 
   return {

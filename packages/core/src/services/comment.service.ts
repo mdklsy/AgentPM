@@ -3,7 +3,9 @@ import { type CreateCommentInput, type ProgressReportInput } from '@agentpm/shar
 import type { Ctx } from '../ctx.js';
 import { writeActivity } from './activity.service.js';
 import { getIssueOr404 } from './issue.service.js';
+import { issueAudience, notify } from './notification.service.js';
 import { requireProjectMembership } from './project.service.js';
+import { emitWebhook } from './webhook.service.js';
 
 async function resolveIssue(ctx: Ctx, issueKey: string) {
   const issue = await getIssueOr404(ctx, issueKey);
@@ -33,6 +35,19 @@ export async function addComment(ctx: Ctx, issueKey: string, input: CreateCommen
     summary: `${comment.author.name} 评论 ${issueKey}`,
     detail: { hasEvidence: !!input.evidence },
   });
+  emitWebhook(ctx, 'comment.added', {
+    projectKey: (
+      await ctx.db.project.findUniqueOrThrow({
+        where: { id: issue.projectId },
+        select: { key: true },
+      })
+    ).key,
+    issueKey,
+    author: comment.author.name,
+    authorType: comment.author.type,
+  });
+  const audience = await issueAudience(ctx, issue);
+  await notify(ctx, audience, 'comment.added', { issueKey, author: comment.author.name });
   return comment;
 }
 
@@ -59,6 +74,17 @@ export async function reportProgress(ctx: Ctx, issueKey: string, input: Progress
       blockers: input.blockers.length,
       artifacts: input.artifacts.length,
     },
+  });
+  emitWebhook(ctx, 'progress.reported', {
+    projectKey: (
+      await ctx.db.project.findUniqueOrThrow({
+        where: { id: issue.projectId },
+        select: { key: true },
+      })
+    ).key,
+    issueKey,
+    percent: input.percent,
+    blockers: input.blockers.length,
   });
   if (input.blockers.some((b) => b.issueKey)) {
     // 阻塞项指向其他 issue → 建立 BLOCKS 链接，方便看板联动

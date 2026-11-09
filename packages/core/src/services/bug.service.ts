@@ -4,7 +4,9 @@ import type { Ctx } from '../ctx.js';
 import { writeActivity } from './activity.service.js';
 import { addComment } from './comment.service.js';
 import { createIssue, serializeIssue, type IssueDetail } from './issue.service.js';
+import { notify, projectAdmins } from './notification.service.js';
 import { requireProjectMembership } from './project.service.js';
+import { emitWebhook } from './webhook.service.js';
 
 export interface BugReportResult {
   status: 'created' | 'deduplicated' | 'pending_approval';
@@ -42,6 +44,17 @@ export async function reportBug(
       action: 'approval.requested',
       summary: `agent 请求提 bug「${input.title}」（待审批）`,
       detail: { approvalId: approval.id, actionType: 'bug.create' },
+    });
+    emitWebhook(ctx, 'approval.requested', {
+      projectKey,
+      actionType: 'bug.create',
+      approvalId: approval.id,
+      title: input.title,
+    });
+    await notify(ctx, await projectAdmins(ctx, project.id), 'approval.requested', {
+      projectKey,
+      actionType: 'bug.create',
+      title: input.title,
     });
     return {
       status: 'pending_approval',
@@ -86,6 +99,11 @@ export async function fileBugInternal(
         action: 'bug.deduplicated',
         summary: `重复 bug 并入 ${dup.issueKey}（指纹 ${input.fingerprint}）`,
       });
+      emitWebhook(ctx, 'bug.deduplicated', {
+        projectKey,
+        issueKey: dup.issueKey,
+        fingerprint: input.fingerprint,
+      });
       return {
         status: 'deduplicated',
         duplicateOf: dup.issueKey,
@@ -115,6 +133,13 @@ export async function fileBugInternal(
     fingerprint: input.fingerprint,
     environment: input.environment,
     parentIssueKey: input.parentIssueKey,
+  });
+  emitWebhook(ctx, 'bug.reported', {
+    projectKey,
+    issueKey: issue.issueKey,
+    title: input.title,
+    severity: input.severity,
+    fingerprint: input.fingerprint ?? null,
   });
   return {
     status: 'created',
