@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { FileTextOutlined, WarningFilled } from '@ant-design/icons';
+import { DashboardOutlined, FileTextOutlined, WarningFilled } from '@ant-design/icons';
 import { api } from '../api/client.js';
 import { useAction, useApi } from '../api/hooks.js';
 import type { ActorType } from '../api/types.js';
@@ -59,7 +59,26 @@ export function MonitoringPage() {
   const [creating, setCreating] = useState(false);
   const [minted, setMinted] = useState<{ name: string; token: string } | null>(null);
   const action = useAction();
+  const inspect = useAction();
   const [form, setForm] = useState({ name: '', description: '' });
+
+  const hasAvatar = (health.data?.avatars ?? []).length > 0;
+
+  /** 立即巡检：服务端进程内跑规则引擎并发布报告，纯页面闭环。 */
+  const runInspect = async () => {
+    const r = await inspect.run(
+      () =>
+        api.post<{ report: { title: string; risks: number } }>(
+          `/v1/projects/${projectKey}/avatar/inspect`,
+          {},
+        ),
+    );
+    if (r) {
+      setMinted(null);
+      reports.reload();
+      health.reload();
+    }
+  };
 
   const sevDot = { HIGH: 'bg-red-500', MEDIUM: 'bg-orange-400', LOW: 'bg-amber-300' } as const;
 
@@ -123,8 +142,7 @@ export function MonitoringPage() {
             ))}
             {(health.data?.avatars ?? []).length === 0 && (
               <p className="text-xs text-slate-300">
-                还没有替身——创建后把它加入项目（AGENT 角色），再运行 avatar-worker
-                即可自动产出日报与告警
+                还没有替身——创建后点「立即巡检」就能在页面里看到第一份报告；也可以让它定时自动巡检（创建完成时会给出命令）
               </p>
             )}
           </div>
@@ -187,10 +205,25 @@ export function MonitoringPage() {
 
       {/* 报告流 */}
       <Card className="p-4">
-        <h3 className="mb-2 font-semibold text-slate-700">替身报告</h3>
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <h3 className="font-semibold text-slate-700">替身报告</h3>
+          <span className="flex items-center gap-2">
+            {inspect.message && <span className="text-xs text-emerald-600">{inspect.message}</span>}
+            <button
+              disabled={inspect.running || !hasAvatar}
+              title={hasAvatar ? '马上跑一遍规则引擎并发布报告' : '先创建替身才能巡检'}
+              className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+              onClick={() => void runInspect()}
+            >
+              <DashboardOutlined aria-hidden />
+              {inspect.running ? '巡检中…' : '立即巡检'}
+            </button>
+          </span>
+        </div>
+        {inspect.error && <ErrorText>{inspect.error}</ErrorText>}
         {reports.loading && <Spinner />}
         {reports.data && reports.data.reports.length === 0 && (
-          <EmptyState>还没有报告——替身 worker 巡检后会在这里产出日报与风险告警</EmptyState>
+          <EmptyState>还没有报告——点上方「立即巡检」立刻生成一份</EmptyState>
         )}
         <div className="space-y-2">
           {reports.data?.reports.map((r) => (
@@ -234,10 +267,7 @@ export function MonitoringPage() {
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
             />
             <p className="text-xs text-slate-400">
-              创建后：① 复制 token；② 把替身加入本项目；③ 在 .env 配置 AVATAR_TOKEN 并运行
-              <code className="mx-1 rounded bg-slate-100 px-1">
-                pnpm --filter @agentpm/avatar-worker once
-              </code>
+              创建后会自动加入本项目（AGENT 角色）。点「立即巡检」马上能看到第一份报告——全程无需配置文件。
             </p>
             {action.error && <ErrorText>{action.error}</ErrorText>}
             <button
@@ -274,22 +304,46 @@ export function MonitoringPage() {
 
       {minted && (
         <Modal
-          title={`替身 ${minted.name} 的 token（仅此一次）`}
+          title={`替身 ${minted.name} 已创建并加入本项目`}
           onClose={() => setMinted(null)}
           wide
         >
-          <SuccessText>运行 worker 需要它：.env 里设置 AVATAR_TOKEN=以下值</SuccessText>
+          <SuccessText>token 仅此一次显示，请先复制保存</SuccessText>
           <pre className="mt-2 overflow-auto rounded-lg bg-slate-900 p-3 text-xs text-emerald-300">
             {minted.token}
           </pre>
-          <button
-            className="mt-3 w-full rounded-lg bg-indigo-600 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
-            onClick={() =>
-              void navigator.clipboard.writeText(minted.token).then(() => setMinted(null))
-            }
-          >
-            复制并关闭
-          </button>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              disabled={inspect.running}
+              className="flex-1 rounded-lg bg-indigo-600 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+              onClick={() => void runInspect()}
+            >
+              {inspect.running ? '巡检中…' : '立即巡检一次（页面里直接看报告）'}
+            </button>
+            <button
+              className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+              onClick={() => void navigator.clipboard.writeText(minted.token)}
+            >
+              复制 token
+            </button>
+          </div>
+          {inspect.error && <ErrorText>{inspect.error}</ErrorText>}
+          <details className="mt-3 text-xs text-slate-500">
+            <summary className="cursor-pointer select-none text-slate-400">
+              想让替身在后台定时自动巡检？（无需配置文件）
+            </summary>
+            <p className="mt-2">
+              把下面这条命令放到你的电脑/服务器上，用 cron 或计划任务定时执行即可（每 15
+              分钟一轮的话去掉 <code>once</code> 常驻运行）：
+            </p>
+            <pre className="mt-1 overflow-auto rounded bg-slate-100 p-2">
+              pnpm --filter @agentpm/avatar-worker once -- --token {minted.token}
+            </pre>
+            <p className="mt-1">
+              API 不在本机时加 <code>--url http://你的地址:3000</code>；只巡检某个项目加{' '}
+              <code>--project 项目KEY</code>。
+            </p>
+          </details>
         </Modal>
       )}
 

@@ -210,6 +210,66 @@ describe('M5 · 替身 runOnce（REST 全链路）', () => {
   });
 });
 
+describe('M5.5 · 立即巡检（服务端进程内）', () => {
+  it('项目没有替身 → 400', async () => {
+    // 新建干净项目（helpers 建的项目已被 runOnce 用例加入了替身）
+    const key = `I${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+    await w.app.inject({
+      method: 'POST',
+      url: '/v1/projects',
+      headers: { cookie: w.adminCookie },
+      payload: { key, name: `巡检空项目 ${key}` },
+    });
+    const res = await w.app.inject({
+      method: 'POST',
+      url: `/v1/projects/${key}/avatar/inspect`,
+      headers: { cookie: w.adminCookie },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('手动巡检必发报告（作者=替身，审计记录触发者）', async () => {
+    // 复用 runOnce 用例加入项目的替身
+    const health = await w.app.inject({
+      method: 'GET',
+      url: `/v1/projects/${w.projectKey}/health`,
+      headers: { cookie: w.adminCookie },
+    });
+    const avatarName = (health.json().avatars as Array<{ name: string }>)[0]!.name;
+
+    // 项目里有一个逾期任务（runOnce 用例造过），巡检应发布告警
+    const res = await w.app.inject({
+      method: 'POST',
+      url: `/v1/projects/${w.projectKey}/avatar/inspect`,
+      headers: { cookie: w.adminCookie },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = res.json();
+    expect(['alert', 'digest']).toContain(body.action);
+    expect(body.report.risks).toBeGreaterThanOrEqual(1);
+
+    // 报告作者为替身
+    const detail = await w.app.inject({
+      method: 'GET',
+      url: `/v1/projects/${w.projectKey}/reports`,
+      headers: { cookie: w.adminCookie },
+    });
+    const items = detail.json().reports as Array<{
+      author: { name: string; type: string };
+    }>;
+    const mine = items.find((r) => r.author.name === avatarName);
+    expect(mine?.author.type).toBe('AVATAR');
+
+    // 审计 detail 记录触发者（detail 不经 REST 暴露，直接查库）
+    const act = await w.db.activity.findFirst({
+      where: { project: { key: w.projectKey }, action: 'report.published' },
+      orderBy: { createdAt: 'desc' },
+    });
+    const via = (act?.detail as { via?: string } | null)?.via ?? '';
+    expect(via).toContain('手动巡检');
+  });
+});
+
 describe('M5 · 健康度与信誉分', () => {
   it('GET /health 返回评分/因子/agent 信誉', async () => {
     const res = await w.app.inject({

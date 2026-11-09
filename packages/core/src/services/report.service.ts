@@ -11,7 +11,13 @@ import { emitWebhook } from './webhook.service.js';
  * - 由 avatar-worker 经 REST 创建（因此同样进审计）；人也可手工发布；
  * - 发布即通知负责人（avatar 的 owner）与项目管理员，并推 webhook。
  */
-export async function createReport(ctx: Ctx, projectKey: string, input: CreateReportInput) {
+export async function createReport(
+  ctx: Ctx,
+  projectKey: string,
+  input: CreateReportInput,
+  /** 额外审计信息（如手动巡检的触发者） */
+  opts: { via?: string } = {},
+) {
   const { project } = await requireProjectMembership(ctx, projectKey, 'MEMBER');
   if (!ctx.actorId) throw AppError.unauthorized();
 
@@ -30,7 +36,7 @@ export async function createReport(ctx: Ctx, projectKey: string, input: CreateRe
     projectId: project.id,
     action: 'report.published',
     summary: `${ctx.actorName ?? '未知'} 发布${input.kind === 'RISK_ALERT' ? '风险告警' : '日报'}：${input.title}`,
-    detail: { reportId: report.id, kind: input.kind },
+    detail: { reportId: report.id, kind: input.kind, ...(opts.via ? { via: opts.via } : {}) },
   });
   emitWebhook(ctx, 'report.published', {
     projectKey,
