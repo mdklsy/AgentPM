@@ -30,7 +30,7 @@ export function registerIssueTools(server: McpServer, ctx: Ctx) {
         projectKey: z.string(),
         q: z.string().optional(),
         type: z.string().optional().describe('逗号分隔多类型，如 TASK,BUG'),
-        state: z.string().optional().describe('状态名，如 In Progress'),
+        state: z.string().optional().describe('状态名，如 进行中'),
         assignee: z.string().optional().describe('账号名，或 none=未指派'),
         label: z.string().optional(),
         limit: z.number().int().min(1).max(100).optional().describe('默认 20'),
@@ -135,7 +135,7 @@ export function registerIssueTools(server: McpServer, ctx: Ctx) {
     {
       title: '流转状态',
       description:
-        '按工作流流转 issue（如 Open → In Progress → Done）。非法迁移会被拒绝；agent 流转到完成态可能触发项目审批策略。',
+        '按工作流流转 issue（如 待办 → 进行中 → 已完成）。非法迁移会被拒绝；agent 流转到完成态可能触发项目审批策略。',
       inputSchema: {
         issueKey,
         toState: z.string().describe('目标状态名，先 project.get 查可用状态'),

@@ -91,7 +91,7 @@ describe('agent 策略审批', () => {
     });
     expect(upd.statusCode).toBe(200);
 
-    // 建任务 → agent 领取 → 流转到 In Progress → Done 触发审批
+    // 建任务 → agent 领取 → 流转到 进行中 → 已完成 触发审批
     const created = await w.app.inject({
       method: 'POST',
       url: `/v1/projects/${w.projectKey}/issues`,
@@ -109,13 +109,13 @@ describe('agent 策略审批', () => {
       method: 'POST',
       url: `/v1/issues/${key}/transition`,
       headers: { authorization: `Bearer ${w.agentToken}` },
-      payload: { toState: 'In Progress' },
+      payload: { toState: '进行中' },
     });
     const toDone = await w.app.inject({
       method: 'POST',
       url: `/v1/issues/${key}/transition`,
       headers: { authorization: `Bearer ${w.agentToken}` },
-      payload: { toState: 'Done' },
+      payload: { toState: '已完成' },
     });
     expect(toDone.json().status).toBe('pending_approval');
     const approvalId = toDone.json().approvalId as string;
@@ -129,15 +129,15 @@ describe('agent 策略审批', () => {
     });
     expect(mine.json().approvals.map((a: { id: string }) => a.id)).toContain(approvalId);
 
-    // 期间 issue 仍是 In Progress
+    // 期间 issue 仍是 进行中
     const mid = await w.app.inject({
       method: 'GET',
       url: `/v1/issues/${key}`,
       headers: { cookie: w.adminCookie },
     });
-    expect(mid.json().issue.state).toBe('In Progress');
+    expect(mid.json().issue.state).toBe('进行中');
 
-    // 管理员批准 → 系统代执行 → Done
+    // 管理员批准 → 系统代执行 → 已完成
     const approve = await w.app.inject({
       method: 'POST',
       url: `/v1/approvals/${approvalId}/decision`,
@@ -152,7 +152,7 @@ describe('agent 策略审批', () => {
       url: `/v1/issues/${key}`,
       headers: { cookie: w.adminCookie },
     });
-    expect(after.json().issue.state).toBe('Done');
+    expect(after.json().issue.state).toBe('已完成');
     expect(after.json().issue.closedAt).not.toBeNull();
 
     // 审计：SYSTEM 代执行留痕（issue.transitioned）；审批决策本身由管理员 WEB 操作产生

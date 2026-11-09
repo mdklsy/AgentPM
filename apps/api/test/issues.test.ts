@@ -56,33 +56,33 @@ describe('issue 生命周期', () => {
     const { body } = await createIssue({ title: '流转测试' });
     const key = body.issue.issueKey;
 
-    // TASK: Open → In Progress 合法
+    // TASK: 待办 → 进行中 合法
     const ok = await w.app.inject({
       method: 'POST',
       url: `/v1/issues/${key}/transition`,
       headers: { cookie: w.adminCookie },
-      payload: { toState: 'In Progress' },
+      payload: { toState: '进行中' },
     });
     expect(ok.statusCode).toBe(200);
     expect(ok.json().status).toBe('done');
-    expect(ok.json().issue.state).toBe('In Progress');
+    expect(ok.json().issue.state).toBe('进行中');
 
-    // TASK: In Progress → In Review 不存在（默认任务流无此状态）
+    // TASK: 进行中 → 评审中 不存在（默认任务流无此状态）
     const bad = await w.app.inject({
       method: 'POST',
       url: `/v1/issues/${key}/transition`,
       headers: { cookie: w.adminCookie },
-      payload: { toState: 'In Review' },
+      payload: { toState: '评审中' },
     });
     expect(bad.statusCode).toBe(400);
     expect(bad.json().error.code).toBe('STATE_NOT_FOUND');
 
-    // → Done 设置 closedAt
+    // → 已完成 设置 closedAt
     const done = await w.app.inject({
       method: 'POST',
       url: `/v1/issues/${key}/transition`,
       headers: { cookie: w.adminCookie },
-      payload: { toState: 'Done' },
+      payload: { toState: '已完成' },
     });
     expect(done.json().issue.closedAt).not.toBeNull();
 
@@ -91,7 +91,7 @@ describe('issue 生命周期', () => {
       method: 'POST',
       url: `/v1/issues/${key}/transition`,
       headers: { cookie: w.adminCookie },
-      payload: { toState: 'In Progress' },
+      payload: { toState: '进行中' },
     });
     expect(reopen.json().issue.closedAt).toBeNull();
   });

@@ -111,8 +111,8 @@ describe('MCP over Streamable HTTP', () => {
       });
       expect(prog.percent).toBe(50);
 
-      // 流转 In Progress（agent 非完成态，不需审批）
-      const tr = await call('issue.transition', { issueKey: key, toState: 'In Progress' });
+      // 流转 进行中（agent 非完成态，不需审批）
+      const tr = await call('issue.transition', { issueKey: key, toState: '进行中' });
       expect(tr.status).toBe('done');
 
       // 提 bug（带指纹）

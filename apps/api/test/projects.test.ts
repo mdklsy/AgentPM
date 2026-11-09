@@ -44,7 +44,7 @@ describe('项目与成员 RBAC', () => {
     const types = body.workflows.map((x: { issueType: string }) => x.issueType);
     expect(types).toEqual(['EPIC', 'STORY', 'TASK', 'BUG', 'SUBTASK']);
     const bugFlow = body.workflows.find((x: { issueType: string }) => x.issueType === 'BUG');
-    expect(bugFlow.states.map((s: { name: string }) => s.name)).toContain('Resolved');
+    expect(bugFlow.states.map((s: { name: string }) => s.name)).toContain('已解决');
     // 成员里有人类也有 agent，类型统一建模
     const memberNames = body.members.map((m: { name: string }) => m.name);
     expect(memberNames).toContain(w.agentName);

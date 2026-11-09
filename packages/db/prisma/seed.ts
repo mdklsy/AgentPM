@@ -238,14 +238,14 @@ async function main() {
   await addIssue({
     type: 'TASK',
     title: '实现认证与 RBAC',
-    state: 'Done',
+    state: '已完成',
     sprint: true,
     labelNames: ['feature'],
   });
   await addIssue({
     type: 'TASK',
     title: 'MCP 工具面：领取与进度汇报',
-    state: 'In Progress',
+    state: '进行中',
     assigneeId: demoAgent.id,
     sprint: true,
     labelNames: ['agent-friendly'],
@@ -265,7 +265,7 @@ async function main() {
     type: 'BUG',
     title: '并发领取同一任务时出现双写',
     description: '两个 agent 同时 claim 同一 issue 的竞态问题（已由 updateMany 原子领取修复）。',
-    state: 'Resolved',
+    state: '已解决',
     priority: 'P1',
     labelNames: ['bug'],
     fingerprint: 'race:issue.claim',

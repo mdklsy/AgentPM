@@ -49,7 +49,7 @@ describe('M5 · 规则引擎（纯函数）', () => {
             issueKey: 'T-1',
             title: 'x',
             type: 'TASK',
-            state: 'In Progress',
+            state: '进行中',
             stateCategory: 'IN_PROGRESS',
             priority: 'P2',
             assignee: 'a',
@@ -71,7 +71,7 @@ describe('M5 · 规则引擎（纯函数）', () => {
             issueKey: 'T-2',
             title: '逾期',
             type: 'TASK',
-            state: 'Open',
+            state: '待办',
             stateCategory: 'TODO',
             priority: 'P1',
             assignee: null,
@@ -161,11 +161,12 @@ describe('M5 · 替身 runOnce（REST 全链路）', () => {
     });
 
     const baseUrl = `http://127.0.0.1:${(w.app.server.address() as { port: number }).port}`;
-    // 21 点 → 触发日报；有 OVERDUE 风险
+    // 用 UTC 锚定时间（而非本地 setHours），避免测试在本地午夜后运行时 UTC 日期错位：
+    // 首跑有 OVERDUE 新风险 → 告警/日报均可
     const result = await runOnce({
       apiUrl: baseUrl,
       token,
-      now: new Date(new Date().setHours(21, 0, 0, 0)),
+      now: new Date(new Date().setUTCHours(21, 0, 0, 0)),
     });
     const p = result.projects.find((x) => x.key === w.projectKey)!;
     expect(['digest', 'alert']).toContain(p.action);
@@ -193,11 +194,11 @@ describe('M5 · 替身 runOnce（REST 全链路）', () => {
     });
     expect(notif).not.toBeNull();
 
-    // 同日再跑 → 日报跳过（去重）
+    // 同日再跑 → 无新增风险不再告警；且（UTC+8 下本地 6 点）未到日报时点 → 跳过
     const again = await runOnce({
       apiUrl: baseUrl,
       token,
-      now: new Date(new Date().setHours(22, 0, 0, 0)),
+      now: new Date(new Date().setUTCHours(22, 0, 0, 0)),
     });
     const p2 = again.projects.find((x) => x.key === w.projectKey)!;
     expect(p2.action === 'skipped' || p2.action === 'alert').toBe(true);

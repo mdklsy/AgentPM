@@ -184,13 +184,13 @@ describe('M4 · 站内通知', () => {
       method: 'POST',
       url: `/v1/issues/${key}/transition`,
       headers: { authorization: `Bearer ${w.agentToken}` },
-      payload: { toState: 'In Progress' },
+      payload: { toState: '进行中' },
     });
     const toDone = await w.app.inject({
       method: 'POST',
       url: `/v1/issues/${key}/transition`,
       headers: { authorization: `Bearer ${w.agentToken}` },
-      payload: { toState: 'Done' },
+      payload: { toState: '已完成' },
     });
     const approvalId = toDone.json().approvalId as string;
 
@@ -252,19 +252,19 @@ describe('M4 · Sprint 燃尽与速率', () => {
         payload: { sprintId },
       });
     }
-    // 完成 A、B（工作流要求先 In Progress 再 Done）
+    // 完成 A、B（工作流要求先 进行中 再 已完成）
     for (const k of keys.slice(0, 2)) {
       await w.app.inject({
         method: 'POST',
         url: `/v1/issues/${k}/transition`,
         headers: { cookie: w.adminCookie },
-        payload: { toState: 'In Progress' },
+        payload: { toState: '进行中' },
       });
       const done = await w.app.inject({
         method: 'POST',
         url: `/v1/issues/${k}/transition`,
         headers: { cookie: w.adminCookie },
-        payload: { toState: 'Done' },
+        payload: { toState: '已完成' },
       });
       expect(done.statusCode).toBe(200);
     }
