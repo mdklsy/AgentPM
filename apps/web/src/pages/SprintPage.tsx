@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import { AimOutlined, CaretRightOutlined, CheckOutlined, RollbackOutlined } from '@ant-design/icons';
 import { api, qs } from '../api/client.js';
 import { useAction, useApi } from '../api/hooks.js';
 import type { BurndownPoint, IssueListItem } from '../api/types.js';
@@ -129,7 +130,12 @@ export function SprintPage() {
           <Card className="p-4">
             <div className="flex flex-wrap items-center gap-3">
               <h2 className="text-base font-semibold text-slate-800">{active.name}</h2>
-              {active.goal && <span className="text-sm text-slate-500">🎯 {active.goal}</span>}
+              {active.goal && (
+                <span className="flex items-center gap-1 text-sm text-slate-500">
+                  <AimOutlined aria-hidden />
+                  {active.goal}
+                </span>
+              )}
               <span className="ml-auto flex items-center gap-2">
                 {active.status === 'PLANNED' && (
                   <button
@@ -145,7 +151,7 @@ export function SprintPage() {
                       if (ok !== undefined) reloadAll();
                     }}
                   >
-                    ▶ 启动 Sprint
+                    <CaretRightOutlined aria-hidden /> 启动 Sprint
                   </button>
                 )}
                 {active.status === 'ACTIVE' && (
@@ -153,7 +159,7 @@ export function SprintPage() {
                     className="rounded-lg bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-100"
                     onClick={() => setConfirmComplete(true)}
                   >
-                    ✓ 完成 Sprint
+                    <CheckOutlined aria-hidden /> 完成 Sprint
                   </button>
                 )}
               </span>
@@ -224,7 +230,7 @@ export function SprintPage() {
                           reloadAll();
                         }}
                       >
-                        ↩
+                        <RollbackOutlined aria-hidden />
                       </button>
                     )}
                   </div>

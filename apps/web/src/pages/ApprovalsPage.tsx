@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { api, qs } from '../api/client.js';
 import { useAction, useApi } from '../api/hooks.js';
 import type { ApprovalItem } from '../api/types.js';
@@ -101,14 +102,14 @@ export function ApprovalsPage() {
                     className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
                     onClick={() => void decideOn(a.id, 'APPROVED')}
                   >
-                    ✓ 批准
+                    <CheckOutlined aria-hidden /> 批准
                   </button>
                   <button
                     disabled={decide.running}
                     className="rounded-lg bg-red-50 px-3 py-1.5 text-sm font-semibold text-red-600 hover:bg-red-100 disabled:opacity-50"
                     onClick={() => void decideOn(a.id, 'REJECTED')}
                   >
-                    ✕ 拒绝
+                    <CloseOutlined aria-hidden /> 拒绝
                   </button>
                 </div>
               )}

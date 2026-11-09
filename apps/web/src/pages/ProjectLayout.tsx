@@ -1,10 +1,24 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, Navigate, NavLink, Outlet, useParams } from 'react-router-dom';
+import {
+  AimOutlined,
+  ApiOutlined,
+  AppstoreOutlined,
+  AuditOutlined,
+  BarChartOutlined,
+  DashboardOutlined,
+  ExperimentOutlined,
+  InboxOutlined,
+  RobotOutlined,
+  TeamOutlined,
+  ThunderboltOutlined,
+  UserOutlined,
+} from '@ant-design/icons';
 import { useApi } from '../api/hooks.js';
 import type { ProjectDetail } from '../api/types.js';
 import { IssueDrawer } from '../components/IssueDrawer.js';
 import { NotificationBell } from '../components/NotificationBell.js';
-import { ErrorText, Spinner } from '../components/ui.js';
+import { ErrorText, Logo, Spinner } from '../components/ui.js';
 import { useAuth } from '../auth.js';
 
 export interface ProjectPageCtx {
@@ -15,17 +29,17 @@ export interface ProjectPageCtx {
 }
 
 const TABS = [
-  { to: '', label: '📋 看板' },
-  { to: 'sprint', label: '🏃 Sprint' },
-  { to: 'backlog', label: '📥 Backlog' },
-  { to: 'monitoring', label: '🧭 监控' },
-  { to: 'overview', label: '📊 总览' },
-  { to: 'activity', label: '⚡ 活动流' },
-  { to: 'agents', label: '🤖 Agent' },
-  { to: 'approvals', label: '🔔 审批' },
-  { to: 'regressions', label: '🧪 回归' },
-  { to: 'members', label: '👥 成员' },
-  { to: 'webhooks', label: '⚙️ Webhooks' },
+  { to: '', label: '看板', icon: AppstoreOutlined },
+  { to: 'sprint', label: 'Sprint', icon: AimOutlined },
+  { to: 'backlog', label: 'Backlog', icon: InboxOutlined },
+  { to: 'monitoring', label: '监控', icon: DashboardOutlined },
+  { to: 'overview', label: '总览', icon: BarChartOutlined },
+  { to: 'activity', label: '活动流', icon: ThunderboltOutlined },
+  { to: 'agents', label: 'Agent', icon: RobotOutlined },
+  { to: 'approvals', label: '审批', icon: AuditOutlined },
+  { to: 'regressions', label: '回归', icon: ExperimentOutlined },
+  { to: 'members', label: '成员', icon: TeamOutlined },
+  { to: 'webhooks', label: 'Webhooks', icon: ApiOutlined },
 ];
 
 export function ProjectLayout() {
@@ -74,8 +88,8 @@ export function ProjectLayout() {
     <div className="flex h-screen flex-col">
       {/* 顶栏 */}
       <header className="flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-2.5 shadow-sm">
-        <Link to="/" className="flex items-center gap-2 text-slate-500 hover:text-slate-700">
-          ⬢
+        <Link to="/" className="flex items-center gap-2 text-slate-500 hover:text-slate-700" title="返回项目列表">
+          <Logo className="h-5 w-5" />
         </Link>
         <span className="rounded bg-indigo-50 px-2 py-0.5 font-mono text-sm font-bold text-indigo-600">
           {key}
@@ -90,8 +104,9 @@ export function ProjectLayout() {
         </span>
         <span className="ml-auto flex items-center gap-2">
           <NotificationBell />
-          <span className="text-sm text-slate-500">
-            👤 {me.displayName}（{data.myRole}）
+          <span className="flex items-center gap-1 text-sm text-slate-500">
+            <UserOutlined aria-hidden />
+            {me.displayName}（{data.myRole}）
           </span>
         </span>
       </header>
@@ -104,13 +119,14 @@ export function ProjectLayout() {
             to={`/p/${key}${t.to ? '/' + t.to : ''}`}
             end={t.to === ''}
             className={({ isActive }) =>
-              `whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition ${
+              `flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition ${
                 isActive
                   ? 'border-indigo-600 text-indigo-700'
                   : 'border-transparent text-slate-500 hover:text-slate-700'
               }`
             }
           >
+            <t.icon aria-hidden />
             {t.label}
           </NavLink>
         ))}

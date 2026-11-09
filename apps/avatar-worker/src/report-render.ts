@@ -11,10 +11,10 @@ export function renderReport(input: {
   engine: 'rules' | 'rules+llm';
 }): { title: string; content: string } {
   const { insights, llm } = input;
-  const sev = { HIGH: '🔴', MEDIUM: '🟠', LOW: '🟡' } as const;
+  const sev = { HIGH: '【高】', MEDIUM: '【中】', LOW: '【低】' } as const;
   const lines: string[] = [];
 
-  lines.push(input.kind === 'RISK_ALERT' ? '## ⚠️ 风险告警' : '## 📋 日报');
+  lines.push(input.kind === 'RISK_ALERT' ? '## 风险告警' : '## 日报');
   lines.push(insights.headline);
   lines.push('');
 
@@ -30,12 +30,12 @@ export function renderReport(input: {
       lines.push(`- ${sev[r.severity]} **${riskLabel(r)}**：${r.message}`);
     }
     for (const r of llm?.keyRisks ?? []) {
-      lines.push(`- ⚪ ${r}`);
+      lines.push(`- 【补充】${r}`);
     }
     lines.push('');
   } else {
     lines.push('### 风险');
-    lines.push('- ✅ 未发现需要关注的风险');
+    lines.push('- 未发现需要关注的风险');
     lines.push('');
   }
 
@@ -54,8 +54,8 @@ export function renderReport(input: {
   const worst = insights.risks[0]?.severity;
   const title =
     input.kind === 'RISK_ALERT'
-      ? `⚠️ ${input.projectName}：${insights.risks.length} 项风险（最高${worst === 'HIGH' ? '高危' : worst === 'MEDIUM' ? '中危' : '低危'}）`
-      : `📋 ${input.projectName} 日报 ${new Date().toLocaleDateString('zh-CN')}`;
+      ? `${input.projectName}：${insights.risks.length} 项风险（最高${worst === 'HIGH' ? '高危' : worst === 'MEDIUM' ? '中危' : '低危'}）`
+      : `${input.projectName} 日报 ${new Date().toLocaleDateString('zh-CN')}`;
   return { title, content: lines.join('\n') };
 }
 

@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  AuditOutlined,
+  BellOutlined,
+  CheckCircleOutlined,
+  FileProtectOutlined,
+  MessageOutlined,
+  UserAddOutlined,
+} from '@ant-design/icons';
 import { api } from '../api/client.js';
 import { timeAgo } from './ui.js';
 
@@ -12,11 +20,19 @@ interface NotificationItem {
 }
 
 const TYPE_LABEL: Record<string, string> = {
-  'issue.assigned': '📌 你被指派了任务',
-  'issue.completed': '✅ 你关注的 issue 已完成',
-  'comment.added': '💬 你关注的 issue 有新评论',
-  'approval.requested': '🔔 有 agent 动作待你审批',
-  'approval.decided': '⚖️ 你的审批请求有结果',
+  'issue.assigned': '你被指派了任务',
+  'issue.completed': '你关注的 issue 已完成',
+  'comment.added': '你关注的 issue 有新评论',
+  'approval.requested': '有 agent 动作待你审批',
+  'approval.decided': '你的审批请求有结果',
+};
+
+const TYPE_ICON: Record<string, typeof BellOutlined> = {
+  'issue.assigned': UserAddOutlined,
+  'issue.completed': CheckCircleOutlined,
+  'comment.added': MessageOutlined,
+  'approval.requested': AuditOutlined,
+  'approval.decided': FileProtectOutlined,
 };
 
 /** 顶栏通知铃铛：30s 轮询未读数；下拉面板可跳转对应 issue。 */
@@ -74,11 +90,12 @@ export function NotificationBell() {
   return (
     <div className="relative" ref={boxRef}>
       <button
-        className="relative rounded-full p-1.5 text-lg leading-none hover:bg-slate-100"
+        className="relative rounded-full p-1.5 text-base leading-none text-slate-500 hover:bg-slate-100 hover:text-slate-700"
         onClick={() => setOpen((v) => !v)}
         title="通知"
+        aria-label="通知"
       >
-        🔔
+        <BellOutlined />
         {unread > 0 && (
           <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
             {unread > 99 ? '99+' : unread}
@@ -115,6 +132,10 @@ export function NotificationBell() {
                 }`}
               >
                 <span className="flex items-center gap-2">
+                  {(() => {
+                    const Icon = TYPE_ICON[n.type] ?? BellOutlined;
+                    return <Icon className="text-xs text-slate-400" aria-hidden />;
+                  })()}
                   <span className="text-xs font-medium text-slate-700">
                     {TYPE_LABEL[n.type] ?? n.type}
                   </span>

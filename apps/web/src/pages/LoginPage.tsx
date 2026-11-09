@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { api } from '../api/client.js';
 import { useAuth } from '../auth.js';
-import { ErrorText } from '../components/ui.js';
+import { ErrorText, Logo } from '../components/ui.js';
 
 export function LoginPage() {
   const { refresh } = useAuth();
@@ -35,7 +35,7 @@ export function LoginPage() {
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
           <div className="mb-2 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-600 text-2xl text-white shadow-lg">
-            ⬢
+            <Logo className="h-8 w-8" />
           </div>
           <h1 className="text-2xl font-bold text-slate-800">AgentPM</h1>
           <p className="mt-1 text-sm text-slate-500">人类与 AI Agent 在同一个项目里协作</p>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ArrowRightOutlined, CloseOutlined, PaperClipOutlined } from '@ant-design/icons';
 import { api } from '../api/client.js';
 import { useAction, useApi } from '../api/hooks.js';
 import type { IssueDetail, ProjectDetail } from '../api/types.js';
@@ -107,8 +108,9 @@ export function IssueDrawer({
                 <button
                   className="ml-auto rounded px-2 py-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
                   onClick={onClose}
+                  aria-label="关闭"
                 >
-                  ✕
+                  <CloseOutlined />
                 </button>
               </div>
               <h2 className="mt-2 text-lg font-semibold text-slate-800">{d.title}</h2>
@@ -138,7 +140,7 @@ export function IssueDrawer({
                       )
                     }
                   >
-                    → {s}
+                    <ArrowRightOutlined aria-hidden /> {s}
                   </button>
                 ))}
                 {d.assignee === me.name ? (
@@ -233,9 +235,10 @@ export function IssueDrawer({
                           href={a.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="mt-1 inline-block rounded bg-white px-2 py-0.5 text-xs text-sky-600 underline"
+                          className="mt-1 inline-flex items-center gap-1 rounded bg-white px-2 py-0.5 text-xs text-sky-600 underline"
                         >
-                          📎 {a.name}
+                          <PaperClipOutlined aria-hidden />
+                          {a.name}
                         </a>
                       ))}
                     </div>

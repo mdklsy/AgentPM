@@ -223,7 +223,7 @@ async function processProject(
       for (const s of list.slice(0, 3)) {
         await api
           .post(`/v1/issues/${s.issueKey}/comments`, {
-            body: `⏱ 替身提醒：该任务已超过 ${policy.stallDays} 天无更新，请确认是否被阻塞。`,
+            body: `替身提醒：该任务已超过 ${policy.stallDays} 天无更新，请确认是否被阻塞。`,
           })
           .catch(() => {});
       }

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import { FileTextOutlined, WarningFilled } from '@ant-design/icons';
 import { api } from '../api/client.js';
 import { useAction, useApi } from '../api/hooks.js';
 import type { ActorType } from '../api/types.js';
@@ -49,7 +50,7 @@ interface ReportItem {
   createdAt: string;
 }
 
-/** 监控中心（M5）：健康度、agent 信誉分、替身状态与报告流。 */
+/** 监控中心（M5）：项目健康度（扣分项）、agent 靠谱分、替身状态与报告流。 */
 export function MonitoringPage() {
   const { projectKey, reloadDetail } = useOutletContext<ProjectPageCtx>();
   const health = useApi<HealthResp>(`/v1/projects/${projectKey}/health`);
@@ -74,8 +75,8 @@ export function MonitoringPage() {
                 <h3 className="font-semibold text-slate-700">项目健康度</h3>
                 <p className="mt-1 text-xs text-slate-400">
                   {health.data.factors.length === 0
-                    ? '各维度正常'
-                    : `${health.data.factors.length} 个扣分因子`}
+                    ? '各维度正常，满分 100'
+                    : `有 ${health.data.factors.length} 项在扣分`}
                 </p>
                 <div className="mt-1 space-y-1">
                   {health.data.factors.slice(0, 4).map((f) => (
@@ -130,9 +131,9 @@ export function MonitoringPage() {
           {health.error && <ErrorText>{health.error}</ErrorText>}
         </Card>
 
-        {/* agent 信誉分 */}
+        {/* agent 靠谱分 */}
         <Card className="p-4">
-          <h3 className="mb-2 font-semibold text-slate-700">Agent 信誉分</h3>
+          <h3 className="mb-2 font-semibold text-slate-700">Agent 靠谱分</h3>
           <div className="max-h-44 space-y-1.5 overflow-y-auto">
             {(health.data?.agentReputations ?? []).map((a) => (
               <div
@@ -141,7 +142,7 @@ export function MonitoringPage() {
               >
                 <ActorChip name={a.name} type="AGENT" />
                 <span className="text-slate-500">
-                  bug 接受率{' '}
+                  bug 被采纳率{' '}
                   <b className={rateColor(a.bugAcceptanceRate)}>
                     {a.bugAcceptanceRate === null ? '—' : `${a.bugAcceptanceRate}%`}
                   </b>
@@ -164,10 +165,10 @@ export function MonitoringPage() {
         </Card>
       </div>
 
-      {/* 健康因子明细 */}
+      {/* 扣分明细 */}
       {health.data && health.data.factors.length > 0 && (
         <Card className="p-4">
-          <h3 className="mb-2 font-semibold text-slate-700">扣分因子明细</h3>
+          <h3 className="mb-2 font-semibold text-slate-700">扣分明细（哪里丢了分）</h3>
           <div className="grid gap-1.5 sm:grid-cols-2">
             {health.data.factors.map((f) => (
               <div
@@ -199,13 +200,14 @@ export function MonitoringPage() {
               className="flex cursor-pointer flex-wrap items-center gap-2 rounded-lg border border-slate-100 px-3 py-2 text-sm hover:border-indigo-200 hover:shadow-sm"
             >
               <span
-                className={`rounded px-1.5 py-0.5 text-[11px] font-bold ${
+                className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-bold ${
                   r.kind === 'RISK_ALERT'
                     ? 'bg-red-100 text-red-700'
                     : 'bg-indigo-100 text-indigo-700'
                 }`}
               >
-                {r.kind === 'RISK_ALERT' ? '⚠️ 告警' : '📋 日报'}
+                {r.kind === 'RISK_ALERT' ? <WarningFilled aria-hidden /> : <FileTextOutlined aria-hidden />}
+                {r.kind === 'RISK_ALERT' ? '告警' : '日报'}
               </span>
               <span className="min-w-0 flex-1 truncate text-slate-700">{r.title}</span>
               <ActorChip name={r.author.name} type={r.author.type} />
