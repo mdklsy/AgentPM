@@ -1,0 +1,508 @@
+// AgentPM data model (MySQL 8).
+// Design notes: docs/adr/0002-unified-actor-model.md (unified Actor),
+// docs/adr/0004-audit-first.md (Activity as domain logic).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------- enums
+
+enum ActorType {
+  HUMAN
+  AGENT
+  AVATAR
+}
+
+enum MemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+  AGENT
+  VIEWER
+}
+
+enum IssueType {
+  EPIC
+  STORY
+  TASK
+  BUG
+  SUBTASK
+}
+
+enum Priority {
+  P0
+  P1
+  P2
+  P3
+  P4
+}
+
+enum StateCategory {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+enum Visibility {
+  PRIVATE
+  INTERNAL
+  PUBLIC
+}
+
+enum SprintStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+}
+
+enum RegressionStatus {
+  PASSED
+  FAILED
+}
+
+enum CaseStatus {
+  PASS
+  FAIL
+  ERROR
+  SKIP
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+enum ActivitySource {
+  WEB
+  API
+  MCP
+  SYSTEM
+}
+
+enum IssueLinkType {
+  BLOCKS
+  RELATES
+  DUPLICATES
+  CAUSES
+}
+
+// ---------------------------------------------------------------- actors
+
+/// 人与 AI 的统一身份（ADR 0002）：HUMAN / AGENT / PM 替身 AVATAR。
+model Actor {
+  id                 String   @id @default(cuid())
+  type               ActorType @default(HUMAN)
+  name               String   @unique @db.VarChar(64)
+  displayName        String   @db.VarChar(128)
+  email              String?  @db.VarChar(255)
+  passwordHash       String?  @db.VarChar(512)
+  avatarUrl          String?  @db.VarChar(512)
+  isActive           Boolean  @default(true)
+  isAdmin            Boolean  @default(false)
+  mustChangePassword Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  agentProfile       AgentProfile?
+  ownedAgents        AgentProfile[]  @relation("AgentOwner")
+  apiTokens          ApiToken[]
+  memberships        Member[]
+  assignedIssues     Issue[]         @relation("IssueAssignee")
+  reportedIssues     Issue[]         @relation("IssueReporter")
+  createdIssues      Issue[]         @relation("IssueCreator")
+  projectsCreated    Project[]       @relation("ProjectCreator")
+  comments           Comment[]
+  watchers           Watcher[]
+  progressReports    ProgressReport[]
+  activities         Activity[]
+  regressionRuns     RegressionRun[]
+  approvalRequested  ApprovalRequest[] @relation("ApprovalRequester")
+  approvalDecided    ApprovalRequest[] @relation("ApprovalDecider")
+  notifications      Notification[]
+}
+
+/// Agent 附加档案：owner、能力声明、心跳。
+model AgentProfile {
+  actorId         String    @id
+  actor           Actor     @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  ownerId         String
+  owner           Actor     @relation("AgentOwner", fields: [ownerId], references: [id])
+  description     String    @db.Text
+  model           String?   @db.VarChar(128)
+  capabilities    Json      @default("[]")
+  status          String    @default("active") @db.VarChar(16)
+  lastHeartbeatAt DateTime?
+  config          Json      @default("{}")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+/// API token：明文不落库，仅存 SHA-256；REST 与 MCP 共用。
+model ApiToken {
+  id         String    @id @default(cuid())
+  actorId    String
+  actor      Actor     @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  name       String    @db.VarChar(128)
+  prefix     String    @db.VarChar(16)
+  tokenHash  String    @unique @db.VarChar(64)
+  scopes     Json      @default("[\"read\"]")
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  activities Activity[]
+
+  @@index([actorId])
+}
+
+// ---------------------------------------------------------------- project
+
+model Project {
+  id          String     @id @default(cuid())
+  key         String     @unique @db.VarChar(16)
+  name        String     @db.VarChar(128)
+  description String?    @db.Text
+  visibility  Visibility @default(PRIVATE)
+  /// issue 编号发号器，创建 issue 时 SELECT ... FOR UPDATE 原子递增
+  numberSeq   Int        @default(0)
+  /// ProjectSettings（packages/shared/src/settings.ts），含 agent 策略
+  settings    Json       @default("{}")
+  archivedAt  DateTime?
+  createdById String
+  createdBy   Actor      @relation("ProjectCreator", fields: [createdById], references: [id])
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  members          Member[]
+  workflows        Workflow[]
+  labels           Label[]
+  sprints          Sprint[]
+  issues           Issue[]
+  activities       Activity[]
+  regressionRuns   RegressionRun[]
+  approvalRequests ApprovalRequest[]
+}
+
+model Member {
+  id        String      @id @default(cuid())
+  projectId String
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  actorId   String
+  actor     Actor       @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  role      MemberRole  @default(MEMBER)
+  addedById String?
+  createdAt DateTime    @default(now())
+
+  @@unique([projectId, actorId])
+  @@index([actorId])
+}
+
+// -------------------------------------------------------------- workflow
+
+/// 每个项目 × issue 类型 一条状态机；建项目时播种默认流（packages/db/src/workflows.ts）。
+model Workflow {
+  id          String    @id @default(cuid())
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  issueType   IssueType
+  name        String    @db.VarChar(128)
+  states      WorkflowState[]
+  transitions WorkflowTransition[]
+
+  @@unique([projectId, issueType])
+}
+
+model WorkflowState {
+  id         String        @id @default(cuid())
+  workflowId String
+  workflow   Workflow      @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  name       String        @db.VarChar(64)
+  category   StateCategory
+  sortOrder  Int           @default(0)
+  isInitial  Boolean       @default(false)
+  issues     Issue[]
+  transitionsFrom WorkflowTransition[] @relation("TransitionFrom")
+  transitionsTo   WorkflowTransition[] @relation("TransitionTo")
+
+  @@unique([workflowId, name])
+}
+
+model WorkflowTransition {
+  id          String          @id @default(cuid())
+  workflowId  String
+  workflow    Workflow        @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  /// null = 允许从任意状态进入 toState
+  fromStateId String?
+  fromState   WorkflowState?  @relation("TransitionFrom", fields: [fromStateId], references: [id], onDelete: Cascade)
+  toStateId   String
+  toState     WorkflowState   @relation("TransitionTo", fields: [toStateId], references: [id], onDelete: Cascade)
+
+  @@unique([workflowId, fromStateId, toStateId])
+}
+
+// ----------------------------------------------------------------- issue
+
+model Label {
+  id          String       @id @default(cuid())
+  projectId   String
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String       @db.VarChar(64)
+  color       String       @default("#6b7280") @db.VarChar(16)
+  issueLabels IssueLabel[]
+
+  @@unique([projectId, name])
+}
+
+model Issue {
+  id            String         @id @default(cuid())
+  projectId     String
+  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  number        Int
+  issueKey      String         @unique @db.VarChar(24)
+  type          IssueType
+  title         String         @db.VarChar(255)
+  description   String?        @db.Text
+  stateId       String
+  state         WorkflowState  @relation(fields: [stateId], references: [id])
+  priority      Priority       @default(P2)
+  assigneeId    String?
+  assignee      Actor?         @relation("IssueAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  reporterId    String
+  reporter      Actor          @relation("IssueReporter", fields: [reporterId], references: [id])
+  parentIssueId String?
+  parentIssue   Issue?         @relation("IssueTree", fields: [parentIssueId], references: [id], onDelete: SetNull)
+  childIssues   Issue[]        @relation("IssueTree")
+  storyPoints   Int?
+  dueDate       DateTime?
+  sprintId      String?
+  sprint        Sprint?        @relation(fields: [sprintId], references: [id], onDelete: SetNull)
+  /// bug 去重指纹（如 test:Class#method）
+  fingerprint   String?        @db.VarChar(191)
+  environment   String?        @db.VarChar(255)
+  closedAt      DateTime?
+  createdById   String
+  createdBy     Actor          @relation("IssueCreator", fields: [createdById], references: [id])
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  labels          IssueLabel[]
+  issueLinksFrom  IssueLink[]  @relation("LinkFrom")
+  issueLinksTo    IssueLink[]  @relation("LinkTo")
+  comments        Comment[]
+  watchers        Watcher[]
+  attachments     Attachment[]
+  progressReports ProgressReport[]
+  activities      Activity[]
+
+  @@index([projectId, number])
+  @@index([projectId, type])
+  @@index([projectId, stateId])
+  @@index([projectId, updatedAt])
+  @@index([assigneeId])
+  @@index([sprintId])
+  @@index([fingerprint])
+}
+
+model IssueLabel {
+  issueId String
+  issue   Issue  @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  labelId String
+  label   Label  @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@id([issueId, labelId])
+}
+
+model IssueLink {
+  id          String        @id @default(cuid())
+  fromIssueId String
+  fromIssue   Issue         @relation("LinkFrom", fields: [fromIssueId], references: [id], onDelete: Cascade)
+  toIssueId   String
+  toIssue     Issue         @relation("LinkTo", fields: [toIssueId], references: [id], onDelete: Cascade)
+  type        IssueLinkType @default(RELATES)
+  createdById String
+  createdAt   DateTime      @default(now())
+
+  @@unique([fromIssueId, toIssueId, type])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  issueId   String
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    Actor    @relation(fields: [authorId], references: [id])
+  body      String   @db.Text
+  /// agent 附带的结构化证据（日志、URL、断言输出）
+  evidence  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([issueId, createdAt])
+}
+
+model Watcher {
+  issueId   String
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  actorId   String
+  actor     Actor    @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([issueId, actorId])
+}
+
+model Attachment {
+  id          String   @id @default(cuid())
+  issueId     String
+  issue       Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  name        String   @db.VarChar(255)
+  /// M1 为 URL 型附件（外部链接）；文件存储 M4 提供
+  url         String   @db.VarChar(1024)
+  mimeType    String?  @db.VarChar(128)
+  sizeBytes   Int?
+  uploadedById String
+  createdAt   DateTime @default(now())
+}
+
+/// agent/人的结构化进度汇报
+model ProgressReport {
+  id        String   @id @default(cuid())
+  issueId   String
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  actorId   String
+  actor     Actor    @relation(fields: [actorId], references: [id])
+  percent   Int
+  notes     String?  @db.Text
+  blockers  Json     @default("[]")
+  artifacts Json     @default("[]")
+  createdAt DateTime @default(now())
+
+  @@index([issueId, createdAt])
+}
+
+// ----------------------------------------------------------------- audit
+
+/// 统一审计流：一切写操作（WEB/REST/MCP/SYSTEM）都落一条（ADR 0004）。
+model Activity {
+  id         String         @id @default(cuid())
+  projectId  String
+  project    Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  issueId    String?
+  issue      Issue?         @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  actorId    String?
+  actor      Actor?         @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  apiTokenId String?
+  apiToken   ApiToken?      @relation(fields: [apiTokenId], references: [id], onDelete: SetNull)
+  action     String         @db.VarChar(64)
+  summary    String         @db.VarChar(512)
+  detail     Json?
+  source     ActivitySource @default(WEB)
+  /// { ip, userAgent, mcpTool, argsDigest }
+  meta       Json?
+  createdAt  DateTime       @default(now())
+
+  @@index([projectId, createdAt])
+  @@index([issueId, createdAt])
+  @@index([actorId, createdAt])
+}
+
+// ---------------------------------------------------------------- sprint
+
+model Sprint {
+  id        String       @id @default(cuid())
+  projectId String
+  project   Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String       @db.VarChar(128)
+  goal      String?      @db.Text
+  startsAt  DateTime?
+  endsAt    DateTime?
+  status    SprintStatus @default(PLANNED)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  issues    Issue[]
+
+  @@index([projectId, status])
+}
+
+// ------------------------------------------------------------ regression
+
+model RegressionRun {
+  id            String           @id @default(cuid())
+  projectId     String
+  project       Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  suite         String           @db.VarChar(128)
+  branch        String?          @db.VarChar(128)
+  commitSha     String?          @db.VarChar(64)
+  triggeredById String
+  triggeredBy   Actor            @relation(fields: [triggeredById], references: [id])
+  status        RegressionStatus
+  total         Int              @default(0)
+  passed        Int              @default(0)
+  failed        Int              @default(0)
+  errors        Int              @default(0)
+  skipped       Int              @default(0)
+  durationMs    Int?
+  summary       Json?
+  finishedAt    DateTime         @default(now())
+  cases         TestCaseResult[]
+
+  @@index([projectId, finishedAt])
+}
+
+model TestCaseResult {
+  id            String         @id @default(cuid())
+  runId         String
+  run           RegressionRun  @relation(fields: [runId], references: [id], onDelete: Cascade)
+  name          String         @db.VarChar(512)
+  className     String?        @db.VarChar(512)
+  status        CaseStatus
+  durationMs    Int?
+  message       String?        @db.Text
+  fingerprint   String?        @db.VarChar(191)
+  linkedIssueId String?
+
+  @@index([runId])
+  @@index([fingerprint])
+}
+
+// -------------------------------------------------------------- approval
+
+/// agent 动作的人工审批闸门：批准后由系统代为执行（source=SYSTEM）。
+model ApprovalRequest {
+  id            String         @id @default(cuid())
+  projectId     String
+  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  requestedById String
+  requestedBy   Actor          @relation("ApprovalRequester", fields: [requestedById], references: [id])
+  /// issue.transition | bug.create | issue.assign
+  actionType    String         @db.VarChar(64)
+  payload       Json
+  status        ApprovalStatus @default(PENDING)
+  decidedById   String?
+  decidedBy     Actor?         @relation("ApprovalDecider", fields: [decidedById], references: [id])
+  decidedAt     DateTime?
+  reason        String?        @db.Text
+  createdAt     DateTime       @default(now())
+
+  @@index([projectId, status])
+  @@index([requestedById, status])
+}
+
+model Notification {
+  id          String    @id @default(cuid())
+  recipientId String
+  recipient   Actor     @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  type        String    @db.VarChar(64)
+  payload     Json
+  readAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([recipientId, readAt])
+}

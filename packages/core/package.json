@@ -1,0 +1,27 @@
+{
+  "name": "@agentpm/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "description": "AgentPM 领域服务层：一切写操作经此落审计（REST 与 MCP 共用）。",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "main": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@agentpm/db": "workspace:*",
+    "@agentpm/shared": "workspace:*",
+    "@node-rs/argon2": "^2.0.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2",
+    "vitest": "^3.0.0"
+  }
+}

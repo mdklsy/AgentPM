@@ -1,0 +1,42 @@
+{
+  "name": "agentpm",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AgentPM — AI-native open-source project management. Humans and AI agents as first-class citizens, with a first-class MCP interface.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "packageManager": "pnpm@12.4.2",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @agentpm/api dev",
+    "start": "pnpm --filter @agentpm/api start",
+    "build": "pnpm -r --if-present typecheck",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "migrate": "pnpm --filter @agentpm/db migrate",
+    "migrate:deploy": "pnpm --filter @agentpm/db migrate:deploy",
+    "db:push": "pnpm --filter @agentpm/db db:push",
+    "seed": "pnpm --filter @agentpm/db seed",
+    "smoke:mcp": "pnpm --filter @agentpm/api exec tsx scripts/mcp-smoke.ts"
+  },
+  "devDependencies": {
+    "@agentpm/eslint-config": "workspace:*",
+    "@commitlint/cli": "^19.6.0",
+    "@commitlint/config-conventional": "^19.6.0",
+    "@eslint/js": "^9.17.0",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@types/node": "^22.10.2",
+    "eslint": "^9.17.0",
+    "prettier": "^3.4.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.0",
+    "vitest": "^3.0.0"
+  }
+}

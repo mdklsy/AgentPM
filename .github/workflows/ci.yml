@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    name: lint / typecheck / test / build
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: agentpm
+          MYSQL_DATABASE: agentpm_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -proot -h localhost"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=20
+
+    env:
+      DATABASE_URL: mysql://root:agentpm@127.0.0.1:3306/agentpm_test
+      TEST_DATABASE_URL: mysql://root:agentpm@127.0.0.1:3306/agentpm_test
+      ROOT_DATABASE_URL: mysql://root:agentpm@127.0.0.1:3306/mysql
+      JWT_SECRET: ci-secret-not-for-production
+      SEED_ADMIN_PASSWORD: CiTest!2026
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @agentpm/db exec prisma generate
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Format check
+        run: pnpm format:check
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: MCP smoke test
+        run: pnpm smoke:mcp
+
+      - name: Commit lint
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch --no-tags --depth=1 origin ${{ github.event.pull_request.base.sha }}
+          npx commitlint --from ${{ github.event.pull_request.base.sha }} --to HEAD --verbose || true

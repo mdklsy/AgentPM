@@ -1,0 +1,47 @@
+# AgentPM self-hosting / local development stack.
+# Usage:
+#   docker compose up -d mysql     # start MySQL only (develop against it)
+#   docker compose up -d           # full stack (MySQL + API)
+#
+# The API reads DATABASE_URL from .env (defaults assume this MySQL instance).
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: agentpm-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: agentpm
+      MYSQL_DATABASE: agentpm_dev
+      MYSQL_USER: agentpm
+      MYSQL_PASSWORD: agentpm
+    ports:
+      - '3306:3306'
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_0900_ai_ci
+    volumes:
+      - agentpm-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost', '-pagentpm']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: agentpm-api
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: mysql://agentpm:agentpm@mysql:3306/agentpm_dev
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      PORT: 3000
+      HOST: 0.0.0.0
+    ports:
+      - '3000:3000'
+    command: sh -c "pnpm --filter @agentpm/db migrate:deploy && pnpm --filter @agentpm/db seed && pnpm --filter @agentpm/api start"
+
+volumes:
+  agentpm-mysql-data:
