@@ -47,6 +47,8 @@ export {
   setSprintStatus,
 } from './services/sprint.service.js';
 export { sprintBurndown, velocity } from './services/burndown.service.js';
+export { createReport, listReports } from './services/report.service.js';
+export { projectHealth } from './services/monitoring.service.js';
 export {
   issueAudience,
   listNotifications,

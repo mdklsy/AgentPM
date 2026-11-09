@@ -16,6 +16,7 @@ import { ProjectsPage } from './pages/ProjectsPage.js';
 import { RegressionsPage } from './pages/RegressionsPage.js';
 import { SprintPage } from './pages/SprintPage.js';
 import { WebhooksPage } from './pages/WebhooksPage.js';
+import { MonitoringPage } from './pages/MonitoringPage.js';
 
 export function App() {
   const { me, loading, logout } = useAuth();
@@ -57,6 +58,7 @@ export function App() {
         <Route path="regressions" element={<RegressionsPage />} />
         <Route path="members" element={<MembersPage />} />
         <Route path="webhooks" element={<WebhooksPage />} />
+        <Route path="monitoring" element={<MonitoringPage />} />
       </Route>
       <Route
         path="*"

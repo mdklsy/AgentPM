@@ -30,6 +30,7 @@
 - 全文与条件搜索、评论、统一活动流、项目统计
 - **Web UI**（M3）：看板拖拽流转、Backlog、issue 详情（评论/进度/证据）、Agent 管理、审批收件箱、SSE 实时活动流、项目总览驾驶舱
 - **协作与报表**（M4）：Sprint 面板（排期/启停/收尾退回）、**基于审计流重建的燃尽图**与速率、站内通知（铃铛+跳转）、**Webhooks**（HMAC 签名出站事件推送，13 类事件 + 投递日志 + 连通性测试）
+- **AI PM 替身 + 监控中心**（M5）：替身定时巡检项目（规则引擎常开 + LLM 叙述增强可选），自动产出日报与风险告警；健康度评分、agent 信誉分（bug 接受率）、扣分因子明细。见 [docs/avatar.md](./docs/avatar.md)
 - REST API + 自动生成的 OpenAPI 文档
 
 ### Agent 能力（差异化）
@@ -118,7 +119,7 @@ packages/
 
 ## 路线图
 
-M0–M4（治理 + 核心 API + MCP + Web UI + 协作报表）已完成；M5 **AI PM 替身 + 监控中心** → M6 v0.1 发布。详见 [docs/roadmap.md](./docs/roadmap.md)。
+M0–M5（治理 + 核心 API + MCP + Web UI + 协作报表 + **AI PM 替身与监控中心**）已完成；M6 v0.1 正式发布（i18n/文档站/安全加固/开源发布）。详见 [docs/roadmap.md](./docs/roadmap.md)。
 
 ## 参与贡献
 

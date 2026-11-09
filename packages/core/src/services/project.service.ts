@@ -207,7 +207,7 @@ export async function addMember(ctx: Ctx, projectKey: string, input: AddMemberIn
   if (!actor) throw AppError.notFound(`账号不存在：${input.actorName}`, 'ACTOR_NOT_FOUND');
   if (actor.type === 'AGENT' && input.role === 'OWNER')
     throw AppError.badRequest('agent 不能成为 OWNER', 'AGENT_CANNOT_OWN');
-  if (actor.type !== 'AGENT' && input.role === 'AGENT')
+  if (actor.type === 'HUMAN' && input.role === 'AGENT')
     throw AppError.badRequest('AGENT 角色仅限 agent 账号', 'ROLE_NOT_MATCH');
 
   const dup = await ctx.db.member.findUnique({
@@ -256,7 +256,7 @@ export async function changeMemberRole(
   if (!member) throw AppError.notFound('成员不存在', 'NOT_A_MEMBER');
   if (member.role === 'OWNER') throw AppError.badRequest('不能变更 OWNER 角色', 'OWNER_IMMUTABLE');
   const actor = await ctx.db.actor.findUniqueOrThrow({ where: { id: member.actorId } });
-  if (actor.type !== 'AGENT' && role === 'AGENT')
+  if (actor.type === 'HUMAN' && role === 'AGENT')
     throw AppError.badRequest('AGENT 角色仅限 agent', 'ROLE_NOT_MATCH');
   const updated = await ctx.db.member.update({ where: { id: member.id }, data: { role } });
   await writeActivity(ctx, {

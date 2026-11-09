@@ -13,6 +13,7 @@ export type NotificationType =
   | 'comment.added' // 你负责/报告/关注的 issue 有新评论
   | 'approval.requested' //（管理员）有 agent 动作待审批
   | 'approval.decided' //（发起者）你的审批请求有结果
+  | 'report.published' //（管理员/负责人）替身发布了日报或风险告警
   | 'webhook.ping'; // 测试投递
 
 export async function notify(

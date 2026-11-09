@@ -49,6 +49,8 @@ export type CreateTokenInput = z.infer<typeof CreateTokenSchema>;
 
 export const CreateAgentSchema = z.object({
   name: z.string().regex(ACTOR_NAME_REGEX),
+  /** 创建 AGENT（一线干活）或 AVATAR（PM 替身，M5） */
+  actorType: z.enum(['AGENT', 'AVATAR']).default('AGENT'),
   displayName: z.string().min(1).max(128).optional(),
   description: z.string().min(1).max(2000),
   model: z.string().max(128).optional(),
@@ -265,3 +267,16 @@ export const ActivityQuerySchema = z.object({
 export type ActivityQuery = z.infer<typeof ActivityQuerySchema>;
 
 export const ApprovalStatusEnum = ApprovalStatusSchema;
+
+/* ----------------------------------------------------------------- reports (M5) */
+
+export const ReportKinds = ['DAILY_DIGEST', 'RISK_ALERT'] as const;
+export type ReportKind = (typeof ReportKinds)[number];
+
+export const CreateReportSchema = z.object({
+  kind: z.enum(ReportKinds),
+  title: z.string().min(1).max(255),
+  content: z.string().min(1).max(65_535),
+  data: z.record(z.unknown()).optional(),
+});
+export type CreateReportInput = z.infer<typeof CreateReportSchema>;

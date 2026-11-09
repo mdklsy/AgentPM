@@ -127,6 +127,7 @@ model Actor {
   approvalRequested  ApprovalRequest[] @relation("ApprovalRequester")
   approvalDecided    ApprovalRequest[] @relation("ApprovalDecider")
   notifications      Notification[]
+  reportsAuthored    Report[] @relation("ReportAuthor")
 }
 
 /// Agent 附加档案：owner、能力声明、心跳。
@@ -190,6 +191,7 @@ model Project {
   regressionRuns   RegressionRun[]
   approvalRequests ApprovalRequest[]
   webhooks         Webhook[]
+  reports          Report[]
 }
 
 model Member {
@@ -542,4 +544,24 @@ model WebhookDelivery {
   createdAt  DateTime @default(now())
 
   @@index([webhookId, createdAt])
+}
+
+// -------------------------------------------------------------- reports (M5)
+
+/// PM 替身产出：日报（DAILY_DIGEST）与风险告警（RISK_ALERT），由 avatar-worker 经 REST 创建。
+model Report {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  /// 发布者（AVATAR actor；也允许人工发布）
+  authorId  String
+  author    Actor    @relation("ReportAuthor", fields: [authorId], references: [id])
+  kind      String   @db.VarChar(32)
+  title     String   @db.VarChar(255)
+  content   String   @db.Text
+  /// 结构化数据：insights（规则引擎）、llm（LLM 叙述）、snapshot 窗口，保证可追溯
+  data      Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  @@index([projectId, createdAt])
 }

@@ -40,9 +40,53 @@ async function upsertAdmin() {
 async function main() {
   const { admin } = await upsertAdmin();
 
+  // PM 替身（M5）：幂等创建；token 打印一次
+  let avatarToken: string | null = null;
+  const existingAvatar = await db.actor.findUnique({ where: { name: 'pm-avatar' } });
+  if (!existingAvatar) {
+    const raw = generateApiToken();
+    const avatar = await db.actor.create({
+      data: {
+        type: 'AVATAR',
+        name: 'pm-avatar',
+        displayName: 'PM 替身',
+        agentProfile: {
+          create: {
+            ownerId: admin.id,
+            description:
+              '种子数据创建的 PM 替身：定时巡检项目、产出日报与风险告警（运行 apps/avatar-worker）。',
+            model: 'rules(+optional-llm)',
+            capabilities: ['monitor', 'report'],
+          },
+        },
+      },
+    });
+    await db.apiToken.create({
+      data: {
+        actorId: avatar.id,
+        name: 'seed-token',
+        prefix: tokenDisplayPrefix(raw),
+        tokenHash: hashApiToken(raw),
+        scopes: ['read', 'write', 'mcp'],
+      },
+    });
+    avatarToken = raw;
+  }
+
   const existing = await db.project.findUnique({ where: { key: 'APM' } });
   if (existing) {
-    console.info('[agentpm-seed] 示例项目 APM 已存在，跳过。管理员账号已确保存在。');
+    // 替身已建好则顺手挂进已有项目（幂等）
+    await db.member
+      .create({
+        data: {
+          projectId: existing.id,
+          actorId: (await db.actor.findUniqueOrThrow({ where: { name: 'pm-avatar' } })).id,
+          role: 'AGENT',
+        },
+      })
+      .catch(() => {});
+    console.info('[agentpm-seed] 示例项目 APM 已存在，跳过。管理员账号与替身已确保存在。');
+    if (avatarToken) printAvatarToken(avatarToken);
     return;
   }
 
@@ -257,6 +301,17 @@ async function main() {
     ],
   });
 
+  // 替身也挂进项目（新建分支）
+  await db.member
+    .create({
+      data: {
+        projectId: project.id,
+        actorId: (await db.actor.findUniqueOrThrow({ where: { name: 'pm-avatar' } })).id,
+        role: 'AGENT',
+      },
+    })
+    .catch(() => {});
+
   console.info(`
 ============================================================
  AgentPM seed 完成
@@ -270,6 +325,16 @@ async function main() {
  MCP HTTP     : POST http://<host>:3000/v1/mcp  Authorization: Bearer <token>
  stdio 网关   : npx agentpm-mcp --url http://<host>:3000/v1/mcp --token <token>
 ============================================================
+`);
+  if (avatarToken) printAvatarToken(avatarToken);
+}
+
+function printAvatarToken(token: string) {
+  console.info(`
+ PM 替身已就绪 : pm-avatar（AVATAR，已加入 APM）
+ 替身 token    : ${token}
+                （仅此一次显示；写入 .env 的 AVATAR_TOKEN 后运行：
+                 pnpm --filter @agentpm/avatar-worker once）
 `);
 }
 

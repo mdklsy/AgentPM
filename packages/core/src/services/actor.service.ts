@@ -2,7 +2,7 @@ import { AppError, type CreateAgentInput, type HeartbeatInput } from '@agentpm/s
 import { generateApiToken, hashApiToken, tokenDisplayPrefix } from '@agentpm/shared/node';
 import type { Ctx } from '../ctx.js';
 
-/** 创建 agent（含首个 token 签发，明文仅此一次返回）。owner = 当前用户。 */
+/** 创建 agent / PM 替身（AVATAR，M5），含首个 token 签发（明文仅此一次返回）。owner = 当前用户。 */
 export async function createAgent(ctx: Ctx, input: CreateAgentInput) {
   if (!ctx.actorId) throw AppError.unauthorized();
   const exists = await ctx.db.actor.findUnique({ where: { name: input.name } });
@@ -10,7 +10,7 @@ export async function createAgent(ctx: Ctx, input: CreateAgentInput) {
 
   const agent = await ctx.db.actor.create({
     data: {
-      type: 'AGENT',
+      type: input.actorType,
       name: input.name,
       displayName: input.displayName ?? input.name,
       agentProfile: {

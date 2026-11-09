@@ -25,6 +25,7 @@ export const WEBHOOK_EVENTS = [
   'approval.requested',
   'approval.decided',
   'sprint.status_changed',
+  'report.published',
 ] as const;
 export type WebhookEventName = (typeof WEBHOOK_EVENTS)[number];
 

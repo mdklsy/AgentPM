@@ -19,6 +19,7 @@ import {
   listBacklog,
   listProjectsForActor,
   listSprints,
+  projectHealth,
   projectStats,
   queryActivities,
   removeMember,
@@ -170,6 +171,12 @@ export function registerProjectRoutes(app: FastifyApp) {
     const { key } = req.params as { key: string };
     const q = req.query as { type?: string; label?: string };
     return { backlog: await listBacklog(makeCtx(app, req), key, q) };
+  });
+
+  app.get('/v1/projects/:key/health', async (req) => {
+    requireAuth(req);
+    const { key } = req.params as { key: string };
+    return projectHealth(makeCtx(app, req), key);
   });
 
   /* ---------------- approvals ---------------- */

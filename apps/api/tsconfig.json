@@ -1,7 +1,12 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "types": ["node"]
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      // 测试直接引用 avatar-worker 源码（与 vitest.config.ts 的 resolve.alias 对齐）
+      "#worker/*": ["../../apps/avatar-worker/src/*"]
+    }
   },
   "include": ["src", "test"]
 }

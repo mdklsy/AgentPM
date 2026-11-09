@@ -1,0 +1,21 @@
+{
+  "name": "@agentpm/llm-adapter",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "description": "AgentPM LLM 适配器：OpenAI 兼容 chat/completions（智谱 GLM / OpenAI / Ollama 等），替身Narrative增强用。",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "main": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2",
+    "vitest": "^3.0.0"
+  }
+}

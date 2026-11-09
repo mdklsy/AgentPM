@@ -43,13 +43,14 @@
 - 已浏览器实测（Sprint 面板/燃尽、通知触发与展示、webhook 创建-测试-日志）
 - 后续增强（M4.x）：高级搜索/保存过滤器、邮件通知渠道、附件文件存储、负载热力图
 
-## M5 AI PM 替身 + 监控中心
+## M5 AI PM 替身 + 监控中心 ✅（2026-11-09）
 
-- `apps/avatar-worker`：事件 + 定时驱动，按 ADR 0005 工作循环
-- LLM 适配器（OpenAI 兼容：智谱 GLM / OpenAI / Ollama）
-- 日报/周报实体、风险告警、负载建议、审批提醒
-- 监控中心：人机活动流、agent 信誉分（bug 接受率等）、项目健康度
-- agent 自主度策略增强（细粒度动作白名单）
+- `apps/avatar-worker`：定时巡检（`--once` 单次 / 常驻轮询），只经 REST 干活、全程审计（ADR 0005）
+- **规则引擎常开**（无需 LLM）：任务停滞/逾期/Sprint 偏离/审批积压/负载不均/agent 失联 六类风险 + 建议
+- `packages/llm-adapter`：OpenAI 兼容（智谱 GLM / OpenAI / Ollama），可选增强报告叙述，失败自动降级
+- Report 实体：DAILY_DIGEST / RISK_ALERT，发布即通知负责人+管理员并推 `report.published` webhook；防打扰去重（新风险才告警、每日至多一份）
+- 监控中心页：项目健康度评分环（与规则引擎同口径）+ 扣分因子、agent 信誉分（bug 接受率/完成量）、替身状态与报告流
+- 使用指南：[docs/avatar.md](./avatar.md)；后续增强（M5.x）：事件驱动实时触发、替身代执行建议动作（仍走审批）、细粒度白名单
 
 ## M6 v0.1 正式发布
 

@@ -18,6 +18,7 @@ const TABS = [
   { to: '', label: '📋 看板' },
   { to: 'sprint', label: '🏃 Sprint' },
   { to: 'backlog', label: '📥 Backlog' },
+  { to: 'monitoring', label: '🧭 监控' },
   { to: 'overview', label: '📊 总览' },
   { to: 'activity', label: '⚡ 活动流' },
   { to: 'agents', label: '🤖 Agent' },

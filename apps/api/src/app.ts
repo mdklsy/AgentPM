@@ -17,6 +17,7 @@ import { registerMcpRoute } from './routes/mcp.routes.js';
 import { registerEventRoutes } from './routes/events.routes.js';
 import { registerNotificationRoutes } from './routes/notifications.routes.js';
 import { registerWebhookRoutes } from './routes/webhooks.routes.js';
+import { registerReportRoutes } from './routes/reports.routes.js';
 import type { FastifyApp } from './types.js';
 
 export interface BuildAppOptions {
@@ -91,6 +92,7 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyApp> 
   registerEventRoutes(app);
   registerNotificationRoutes(app);
   registerWebhookRoutes(app);
+  registerReportRoutes(app);
   registerMcpRoute(app);
 
   app.get('/healthz', async () => ({ ok: true, service: 'agentpm-api' }));

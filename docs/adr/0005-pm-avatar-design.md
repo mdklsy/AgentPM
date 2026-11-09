@@ -1,6 +1,6 @@
 # ADR 0005 — PM 替身（Avatar）设计预留
 
-- 状态：Proposed（M5 实现，本 ADR 冻结接口边界）
+- 状态：Accepted（已实现于 M5：apps/avatar-worker + packages/llm-adapter + 监控中心）
 - 日期：2026-11-09
 
 ## 背景
