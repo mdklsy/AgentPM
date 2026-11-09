@@ -3,7 +3,6 @@ import {
   createReport,
   getCurrentSprint,
   listApprovals,
-  listReports,
   projectStats,
   requireProjectMembership,
   searchIssues,
@@ -31,18 +30,20 @@ export function registerAvatarRoutes(app: FastifyApp) {
       where: { projectId: project.id, actor: { type: 'AVATAR' } },
       select: { actor: { select: { id: true, name: true } } },
     });
-    if (!avatar)
-      throw AppError.badRequest('NO_AVATAR', '项目里还没有 PM 替身，请先在监控页创建');
+    if (!avatar) throw AppError.badRequest('项目里还没有 PM 替身，请先在监控页创建', 'NO_AVATAR');
+    // 手动巡检也算替身活动：刷新心跳，监控页"巡检 xx 前"才有意义
+    await ctx.db.agentProfile
+      .update({ where: { actorId: avatar.actor.id }, data: { lastHeartbeatAt: new Date() } })
+      .catch(() => {});
 
     const policy = parseProjectSettings(project.settings).avatarPolicy;
     const now = new Date();
 
-    const [stats, issuesResp, approvals, sprint, lastReports] = await Promise.all([
+    const [stats, issuesResp, approvals, sprint] = await Promise.all([
       projectStats(ctx, key),
       searchIssues(ctx, key, { page: 1, pageSize: 100, sort: 'updated_desc' }),
       listApprovals(ctx, key, { status: 'PENDING' }),
       getCurrentSprint(ctx, key),
-      listReports(ctx, key, 1),
     ]);
 
     let burndownTail: SnapshotInput['burndownTail'] = null;
@@ -51,13 +52,19 @@ export function registerAvatarRoutes(app: FastifyApp) {
       burndownTail = bd ? bd.points.slice(-3) : null;
     }
 
+    // 进程内服务返回 Date 对象；规则引擎输入与 REST JSON 同构（ISO 字符串）——走一次 JSON 往返对齐
     const insights = computeInsights({
       projectKey: key,
       projectName: project.name,
-      stats,
-      issues: issuesResp.items,
+      stats: JSON.parse(JSON.stringify(stats)) as SnapshotInput['stats'],
+      issues: JSON.parse(JSON.stringify(issuesResp.items)) as SnapshotInput['issues'],
       burndownTail,
-      pendingApprovals: approvals,
+      pendingApprovals: approvals.map((a) => ({
+        id: a.id,
+        actionType: a.actionType,
+        requestedBy: a.requestedBy,
+        createdAt: a.createdAt.toISOString(),
+      })),
       policy,
       now,
     });

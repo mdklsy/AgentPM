@@ -8,12 +8,19 @@ import type { ActivitySource, ActorType, IssueType, Priority } from '../api/type
 export function Logo({ className = 'h-5 w-5' }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={className} aria-hidden>
-      <path d="M12 1.7 21 6.85v10.3L12 22.3 3 17.15V6.85L12 1.7Z" fill="currentColor" opacity=".12" />
+      <path
+        d="M12 1.7 21 6.85v10.3L12 22.3 3 17.15V6.85L12 1.7Z"
+        fill="currentColor"
+        opacity=".12"
+      />
       <path
         d="M12 1.7 21 6.85v10.3L12 22.3 3 17.15V6.85L12 1.7Zm0 2.1L4.9 7.9v8.2L12 20.2l7.1-4.1V7.9L12 3.8Z"
         fill="currentColor"
       />
-      <path d="M12 7.2 15.6 16h-1.9l-.85-2.2h-1.7L10.3 16H8.4L12 7.2Zm0 3.4-.55 1.6h1.1L12 10.6Z" fill="currentColor" />
+      <path
+        d="M12 7.2 15.6 16h-1.9l-.85-2.2h-1.7L10.3 16H8.4L12 7.2Zm0 3.4-.55 1.6h1.1L12 10.6Z"
+        fill="currentColor"
+      />
     </svg>
   );
 }

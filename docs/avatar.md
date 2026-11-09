@@ -1,14 +1,26 @@
-# PM 替身使用指南（M5）
+# PM 替身使用指南（M5 / M5.5）
 
-替身（AVATAR）是负责人在后台的 AI 分身：定时巡检项目 → 规则引擎识别风险（常开）→ LLM 增强叙述（可选）→ 产出日报与风险告警。设计边界见 [ADR 0005](./adr/0005-pm-avatar-design.md)：**只经 REST 干活，每一步进审计**。
+替身（AVATAR）是负责人在后台的 AI 分身：巡检项目 → 规则引擎识别风险（常开）→ LLM 增强叙述（可选）→ 产出日报与风险告警。设计边界见 [ADR 0005](./adr/0005-pm-avatar-design.md)：**只经 REST 干活，每一步进审计**。
 
-## 快速开始
+## 快速开始（纯页面，零配置）
 
-### 1. 创建替身并接入项目
+1. 项目 → 监控 → 「+ 创建替身」（自动加入项目，token 仅显示一次）。
+2. 点 **「立即巡检」** —— 服务端进程内跑一遍规则引擎并当场发布报告（有非低危风险发告警，否则发日报），报告、通知、审计一步到位。
 
-方式 A（Web）：项目 → 🧭 监控 → "+ 创建替身"（自动加入项目，token 仅显示一次）。
+就这两步。定时自动巡检是可选项：把创建完成弹窗里给的命令放到你的电脑/服务器上用 cron 或计划任务定时执行：
 
-方式 B（REST）：
+```bash
+pnpm --filter @agentpm/avatar-worker once -- --token <替身token>
+# 可选：--url http://你的API地址:3000  --project 项目KEY（只巡检该项目）
+# 常驻模式（默认每 15 分钟一轮，AVATAR_INTERVAL_MIN 可调）：去掉 once
+pnpm --filter @agentpm/avatar-worker start -- --token <替身token>
+```
+
+（也支持环境变量 `AVATAR_TOKEN` / `AGENTPM_API_URL`，CLI 参数优先。）
+
+产出会出现在：监控中心 → 替身报告；负责人的通知铃铛；`report.published` webhook（可接群机器人）。
+
+### REST 方式创建（可选）
 
 ```bash
 curl -X POST http://127.0.0.1:3000/v1/agents \
@@ -20,19 +32,9 @@ curl -X POST http://127.0.0.1:3000/v1/projects/APM/members \
   -d '{"actorName":"pm-avatar","role":"AGENT"}'
 ```
 
-### 2. 运行 worker
-
-```bash
-# .env: AVATAR_TOKEN=<替身token>  AGENTPM_API_URL=http://127.0.0.1:3000
-pnpm --filter @agentpm/avatar-worker once    # 单次巡检（cron/CI/手动）
-pnpm --filter @agentpm/avatar-worker start   # 常驻（默认每 15 分钟，AVATAR_INTERVAL_MIN 可调）
-```
-
-产出会出现在：监控中心 → 替身报告；负责人的通知铃铛；`report.published` webhook（可接群机器人）。
-
 ## 行为规则
 
-- **采集**：项目统计、issue 列表、待审批、当前 Sprint 燃尽——全部经 REST（审计可见）。
+- **采集**：项目统计、issue 列表、待审批、当前 Sprint 燃尽——worker 经 REST（审计可见）；「立即巡检」在 API 进程内采数，同样落审计。
 - **风险识别（纯规则，无需 LLM）**：任务停滞（`avatarPolicy.stallDays` 天无更新）、逾期、Sprint 偏离（燃尽尾部 vs 理想线）、审批积压（>24h）、负载不均（max ≥ 3×avg）、agent 失联（有在办但心跳 >30min）。
 - **报告决策（防打扰）**：出现**新的**中/高危 → 立即 `RISK_ALERT`；到 `avatarPolicy.digestHour`（默认 20 点）且当日无任何报告 → `DAILY_DIGEST`；其余轮询静默跳过。
 - **可选动作**：`avatarPolicy.commentOnStalled=true` 时，替身会在停滞任务下评论提醒（每次最多 3 条）。

@@ -12,13 +12,12 @@ import {
   RobotOutlined,
   TeamOutlined,
   ThunderboltOutlined,
-  UserOutlined,
 } from '@ant-design/icons';
 import { useApi } from '../api/hooks.js';
 import type { ProjectDetail } from '../api/types.js';
 import { IssueDrawer } from '../components/IssueDrawer.js';
 import { NotificationBell } from '../components/NotificationBell.js';
-import { ErrorText, Logo, Spinner } from '../components/ui.js';
+import { ErrorText, Logo, Spinner, Avatar } from '../components/ui.js';
 import { useAuth } from '../auth.js';
 
 export interface ProjectPageCtx {
@@ -88,7 +87,11 @@ export function ProjectLayout() {
     <div className="flex h-screen flex-col">
       {/* 顶栏 */}
       <header className="flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-2.5 shadow-sm">
-        <Link to="/" className="flex items-center gap-2 text-slate-500 hover:text-slate-700" title="返回项目列表">
+        <Link
+          to="/"
+          className="flex items-center gap-2 text-slate-500 hover:text-slate-700"
+          title="返回项目列表"
+        >
           <Logo className="h-5 w-5" />
         </Link>
         <span className="rounded bg-indigo-50 px-2 py-0.5 font-mono text-sm font-bold text-indigo-600">
@@ -104,8 +107,8 @@ export function ProjectLayout() {
         </span>
         <span className="ml-auto flex items-center gap-2">
           <NotificationBell />
-          <span className="flex items-center gap-1 text-sm text-slate-500">
-            <UserOutlined aria-hidden />
+          <span className="flex items-center gap-1.5 text-sm text-slate-500">
+            <Avatar name={me.displayName || me.name} avatarUrl={me.avatarUrl} className="h-6 w-6" />
             {me.displayName}（{data.myRole}）
           </span>
         </span>

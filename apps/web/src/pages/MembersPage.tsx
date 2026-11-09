@@ -1,17 +1,46 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { useAction } from '../api/hooks.js';
-import type { MemberRole } from '../api/types.js';
+import type { ActorType, MemberRole } from '../api/types.js';
 import type { ProjectPageCtx } from './ProjectLayout.js';
 import { ActorChip, Card, ErrorText, SuccessText, timeAgo } from '../components/ui.js';
 
-/** 成员管理：人与 agent 同列表；agent 用紫色标识，可看心跳 */
+interface ActorHit {
+  name: string;
+  displayName: string;
+  type: ActorType;
+  avatarUrl: string | null;
+}
+
+/** 成员管理：人与 agent 同列表；agent 用紫色标识，可看心跳；添加时从全局花名册搜索选人。 */
 export function MembersPage() {
   const { projectKey, detail, reloadDetail } = useOutletContext<ProjectPageCtx>();
   const [actorName, setActorName] = useState('');
   const [role, setRole] = useState<MemberRole>('MEMBER');
   const action = useAction();
+
+  // 选人下拉：输入即搜（/v1/actors/search）
+  const [hits, setHits] = useState<ActorHit[]>([]);
+  const [openList, setOpenList] = useState(false);
+  const boxRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!openList) return;
+    const t = setTimeout(() => {
+      void api
+        .get<{ actors: ActorHit[] }>(`/v1/actors/search?q=${encodeURIComponent(actorName)}`)
+        .then((r) => setHits(r.actors))
+        .catch(() => setHits([]));
+    }, 150);
+    return () => clearTimeout(t);
+  }, [actorName, openList]);
+  useEffect(() => {
+    const close = (e: MouseEvent) => {
+      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpenList(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, []);
 
   const isAdmin = detail.myRole === 'OWNER' || detail.myRole === 'ADMIN';
 
@@ -19,12 +48,35 @@ export function MembersPage() {
     <div className="mx-auto max-w-3xl">
       {isAdmin && (
         <Card className="mb-4 flex flex-wrap items-center gap-2 p-3">
-          <input
-            value={actorName}
-            onChange={(e) => setActorName(e.target.value)}
-            placeholder="账号名（人类或 agent）"
-            className="min-w-44 flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm"
-          />
+          <div className="relative min-w-44 flex-1" ref={boxRef}>
+            <input
+              value={actorName}
+              onChange={(e) => {
+                setActorName(e.target.value);
+                setOpenList(true);
+              }}
+              onFocus={() => setOpenList(true)}
+              placeholder="搜索成员（全局花名册：人或 agent）"
+              className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm"
+            />
+            {openList && hits.length > 0 && (
+              <div className="absolute left-0 right-0 top-9 z-20 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
+                {hits.map((h) => (
+                  <button
+                    key={h.name}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-indigo-50"
+                    onClick={() => {
+                      setActorName(h.name);
+                      setOpenList(false);
+                    }}
+                  >
+                    <ActorChip name={h.name} type={h.type} avatarUrl={h.avatarUrl} />
+                    <span className="text-xs text-slate-400">{h.displayName}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <select
             value={role}
             onChange={(e) => setRole(e.target.value as MemberRole)}
@@ -66,11 +118,30 @@ export function MembersPage() {
       <div className="space-y-2">
         {detail.members.map((m) => (
           <Card key={m.name} className="flex flex-wrap items-center gap-3 p-3 text-sm">
-            <ActorChip name={m.name} type={m.type} />
+            <ActorChip name={m.name} type={m.type} avatarUrl={m.avatarUrl} />
             <span className="text-slate-600">{m.displayName}</span>
-            <span className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
-              {m.role}
-            </span>
+            {isAdmin && m.role !== 'OWNER' ? (
+              <select
+                value={m.role}
+                onChange={async (e) => {
+                  const next = e.target.value as MemberRole;
+                  const ok = await action.run(
+                    () => api.patch(`/v1/projects/${projectKey}/members/${m.name}`, { role: next }),
+                    `${m.name} 角色已改为 ${next}`,
+                  );
+                  if (ok !== undefined) reloadDetail();
+                }}
+                className="rounded border border-slate-200 px-1.5 py-0.5 text-xs"
+              >
+                {(['ADMIN', 'MEMBER', 'AGENT', 'VIEWER'] as const).map((r) => (
+                  <option key={r}>{r}</option>
+                ))}
+              </select>
+            ) : (
+              <span className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
+                {m.role}
+              </span>
+            )}
             {m.type !== 'HUMAN' && (
               <span className="text-xs text-slate-400">
                 {m.lastHeartbeatAt ? `心跳 ${timeAgo(m.lastHeartbeatAt)}` : '无心跳'}

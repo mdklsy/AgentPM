@@ -66,12 +66,11 @@ export function MonitoringPage() {
 
   /** 立即巡检：服务端进程内跑规则引擎并发布报告，纯页面闭环。 */
   const runInspect = async () => {
-    const r = await inspect.run(
-      () =>
-        api.post<{ report: { title: string; risks: number } }>(
-          `/v1/projects/${projectKey}/avatar/inspect`,
-          {},
-        ),
+    const r = await inspect.run(() =>
+      api.post<{ report: { title: string; risks: number } }>(
+        `/v1/projects/${projectKey}/avatar/inspect`,
+        {},
+      ),
     );
     if (r) {
       setMinted(null);
@@ -239,7 +238,11 @@ export function MonitoringPage() {
                     : 'bg-indigo-100 text-indigo-700'
                 }`}
               >
-                {r.kind === 'RISK_ALERT' ? <WarningFilled aria-hidden /> : <FileTextOutlined aria-hidden />}
+                {r.kind === 'RISK_ALERT' ? (
+                  <WarningFilled aria-hidden />
+                ) : (
+                  <FileTextOutlined aria-hidden />
+                )}
                 {r.kind === 'RISK_ALERT' ? '告警' : '日报'}
               </span>
               <span className="min-w-0 flex-1 truncate text-slate-700">{r.title}</span>
@@ -267,7 +270,8 @@ export function MonitoringPage() {
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
             />
             <p className="text-xs text-slate-400">
-              创建后会自动加入本项目（AGENT 角色）。点「立即巡检」马上能看到第一份报告——全程无需配置文件。
+              创建后会自动加入本项目（AGENT
+              角色）。点「立即巡检」马上能看到第一份报告——全程无需配置文件。
             </p>
             {action.error && <ErrorText>{action.error}</ErrorText>}
             <button

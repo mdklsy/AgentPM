@@ -65,6 +65,45 @@ export const HeartbeatSchema = z.object({
 });
 export type HeartbeatInput = z.infer<typeof HeartbeatSchema>;
 
+/* ------------------------------------------------- users（M5.5 实例级团队管理） */
+
+export const CreateUserSchema = z.object({
+  name: z.string().regex(ACTOR_NAME_REGEX, '小写字母开头，仅小写字母/数字/中划线'),
+  displayName: z.string().min(1).max(128),
+  email: z.string().email().optional(),
+  password: z.string().min(8).max(128),
+  isAdmin: z.boolean().default(false),
+  /** 首次登录强制改密（管理员代建账号时建议开启） */
+  mustChangePassword: z.boolean().default(false),
+});
+export type CreateUserInput = z.infer<typeof CreateUserSchema>;
+
+/** 管理员改用户：重置密码（置 mustChangePassword）、启停、管理员开关等 */
+export const AdminUpdateUserSchema = z.object({
+  displayName: z.string().min(1).max(128).optional(),
+  email: z.string().email().nullable().optional(),
+  isAdmin: z.boolean().optional(),
+  isActive: z.boolean().optional(),
+  newPassword: z.string().min(8).max(128).optional(),
+});
+export type AdminUpdateUserInput = z.infer<typeof AdminUpdateUserSchema>;
+
+/** 本人改自己：只能改显示名（头像走独立端点，密码走 change-password） */
+export const SelfUpdateSchema = z.object({
+  displayName: z.string().min(1).max(128).optional(),
+});
+export type SelfUpdateInput = z.infer<typeof SelfUpdateSchema>;
+
+/** 头像 data URL（image/*，base64 解码后 ≤256KB；前端上传前压缩到 128px） */
+export const AvatarDataSchema = z
+  .string()
+  .regex(
+    /^data:image\/(png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+/=]+$/,
+    '仅支持 png/jpeg/webp/gif 的 data URL',
+  )
+  .refine((s) => (s.split(',')[1]?.length ?? 0) * 0.75 <= 256 * 1024, '头像不能超过 256KB');
+export type AvatarData = z.infer<typeof AvatarDataSchema>;
+
 /* --------------------------------------------------------------- project */
 
 export const CreateProjectSchema = z.object({

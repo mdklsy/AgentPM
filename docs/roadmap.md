@@ -43,6 +43,15 @@
 - 已浏览器实测（Sprint 面板/燃尽、通知触发与展示、webhook 创建-测试-日志）
 - 后续增强（M4.x）：高级搜索/保存过滤器、邮件通知渠道、附件文件存储、负载热力图
 
+## M5.5 体验整改 ✅（2026-11-10）
+
+- 工作流状态中文化（待办/进行中/评审中/已完成/已解决/已关闭），存量库迁移脚本 `localize-states.ts`（含历史审计与待审批重放数据）
+- 监控页文案口语化（扣分项/靠谱分/bug 被采纳率）
+- 替身「立即巡检」：页面一键触发服务端规则引擎并发布报告，创建替身不再需要配置文件；worker 支持 `--token/--url/--project` 参数
+- 全局团队成员管理（/team）：花名册/建用户/重置密码/启停/管理员开关/头像上传/个人 API Token 管理；项目加成员改搜索选人 + 角色就地修改
+- 图标全部改用 @ant-design/icons（蚂蚁图标库），报告与通知去 emoji
+- 基础功能对标 Jira 的差距盘点见 [jira-gap-analysis.md](./jira-gap-analysis.md)
+
 ## M5 AI PM 替身 + 监控中心 ✅（2026-11-09）
 
 - `apps/avatar-worker`：定时巡检（`--once` 单次 / 常驻轮询），只经 REST 干活、全程审计（ADR 0005）
@@ -55,5 +64,6 @@
 ## M6 v0.1 正式发布
 
 - 中英双语 i18n、文档站、安全加固 pass（依赖审计、渗透自查清单）
+- P0 基本盘补齐（见 [jira-gap-analysis.md](./jira-gap-analysis.md)）：附件文件上传、CSV 导出/导入、评论 @提及、批量操作、"我的工作"跨项目视图、邮件通知
 - 一键部署（docker-compose / Helm 骨架）、演示数据一键导入
 - GitHub 开源发布（banner、announce、Discussion 引导）

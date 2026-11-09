@@ -1,6 +1,11 @@
 import { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { AimOutlined, CaretRightOutlined, CheckOutlined, RollbackOutlined } from '@ant-design/icons';
+import {
+  AimOutlined,
+  CaretRightOutlined,
+  CheckOutlined,
+  RollbackOutlined,
+} from '@ant-design/icons';
 import { api, qs } from '../api/client.js';
 import { useAction, useApi } from '../api/hooks.js';
 import type { BurndownPoint, IssueListItem } from '../api/types.js';

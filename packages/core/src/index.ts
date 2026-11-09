@@ -12,6 +12,15 @@ export {
 } from './services/auth.service.js';
 export { createAgent, getActorByName, heartbeat, listAgents } from './services/actor.service.js';
 export {
+  adminUpdateUser,
+  createUser,
+  listUsers,
+  requireInstanceAdmin,
+  searchActors,
+  setAvatar,
+  updateSelfProfile,
+} from './services/user.service.js';
+export {
   addMember,
   changeMemberRole,
   createProject,

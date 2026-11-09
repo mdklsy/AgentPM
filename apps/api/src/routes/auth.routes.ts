@@ -54,6 +54,7 @@ export function registerAuthRoutes(app: FastifyApp) {
         type: actor.type,
         isAdmin: actor.isAdmin,
         mustChangePassword: actor.mustChangePassword,
+        avatarUrl: actor.avatarUrl,
       },
     };
   });

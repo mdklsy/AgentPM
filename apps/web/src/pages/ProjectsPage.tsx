@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { PlusOutlined, TeamOutlined } from '@ant-design/icons';
 import { api } from '../api/client.js';
 import { useAction, useApi } from '../api/hooks.js';
 import type { ProjectSummary } from '../api/types.js';
@@ -19,11 +20,19 @@ export function ProjectsPage() {
           <h1 className="text-xl font-bold text-slate-800">我的项目</h1>
           <p className="text-sm text-slate-500">人类与 agent 共享同一份项目视图</p>
         </div>
+        <Link
+          to="/team"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+        >
+          <TeamOutlined aria-hidden />
+          团队成员
+        </Link>
         <button
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+          className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
           onClick={() => setCreating(true)}
         >
-          + 创建项目
+          <PlusOutlined aria-hidden />
+          创建项目
         </button>
       </div>
 

@@ -104,7 +104,8 @@ model Actor {
   displayName        String   @db.VarChar(128)
   email              String?  @db.VarChar(255)
   passwordHash       String?  @db.VarChar(512)
-  avatarUrl          String?  @db.VarChar(512)
+  /// 头像（M5.5：data URL 存取，前端上传时压缩到 128px）
+  avatarUrl          String?  @db.Text
   isActive           Boolean  @default(true)
   isAdmin            Boolean  @default(false)
   mustChangePassword Boolean  @default(false)

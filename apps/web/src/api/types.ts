@@ -41,6 +41,7 @@ export interface ProjectDetail {
     type: ActorType;
     role: MemberRole;
     isActive: boolean;
+    avatarUrl: string | null;
     lastHeartbeatAt: string | null;
   }>;
   workflows: Array<{

@@ -7,6 +7,7 @@ export interface Me {
   type: 'HUMAN' | 'AGENT' | 'AVATAR';
   isAdmin: boolean;
   mustChangePassword: boolean;
+  avatarUrl?: string | null;
 }
 
 interface AuthCtx {

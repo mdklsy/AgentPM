@@ -118,6 +118,7 @@ export async function getProjectDetail(ctx: Ctx, projectKey: string) {
           displayName: true,
           type: true,
           isActive: true,
+          avatarUrl: true,
           agentProfile: { select: { lastHeartbeatAt: true, status: true } },
         },
       },
@@ -150,6 +151,7 @@ export async function getProjectDetail(ctx: Ctx, projectKey: string) {
       type: m.actor.type,
       role: m.role,
       isActive: m.actor.isActive,
+      avatarUrl: m.actor.avatarUrl,
       lastHeartbeatAt: m.actor.agentProfile?.lastHeartbeatAt ?? null,
     })),
     workflows: workflows.map((w) => ({

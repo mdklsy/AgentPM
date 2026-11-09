@@ -15,6 +15,7 @@ import { ProjectLayout } from './pages/ProjectLayout.js';
 import { ProjectsPage } from './pages/ProjectsPage.js';
 import { RegressionsPage } from './pages/RegressionsPage.js';
 import { SprintPage } from './pages/SprintPage.js';
+import { TeamPage } from './pages/TeamPage.js';
 import { WebhooksPage } from './pages/WebhooksPage.js';
 import { MonitoringPage } from './pages/MonitoringPage.js';
 
@@ -47,6 +48,7 @@ export function App() {
     <Routes>
       <Route path="/login" element={<Navigate to="/" replace />} />
       <Route path="/" element={<ProjectsPage />} />
+      <Route path="/team" element={<TeamPage />} />
       <Route path="/p/:key" element={<ProjectLayout />}>
         <Route index element={<BoardPage />} />
         <Route path="sprint" element={<SprintPage />} />
