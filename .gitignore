@@ -36,3 +36,4 @@ packages/db/src/generated/
 
 # zcode workspace config (may contain local paths/credentials)
 .zcode/
+gui-test-screenshots/

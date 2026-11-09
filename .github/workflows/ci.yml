@@ -60,6 +60,9 @@ jobs:
       - name: Test
         run: pnpm test
 
+      - name: Build web
+        run: pnpm --filter @agentpm/web build
+
       - name: MCP smoke test
         run: pnpm smoke:mcp
 

@@ -28,6 +28,7 @@
 - 可校验的工作流状态机（按项目 + issue 类型，建项目自动播种默认流）
 - **并发安全的任务领取**（claim/release）：多人多 agent 抢同一个任务，只有一个赢
 - 全文与条件搜索、评论、统一活动流、项目统计
+- **Web UI**（M3）：看板拖拽流转、Backlog、issue 详情（评论/进度/证据）、Agent 管理、审批收件箱、SSE 实时活动流、项目总览驾驶舱
 - REST API + 自动生成的 OpenAPI 文档
 
 ### Agent 能力（差异化）
@@ -56,6 +57,7 @@ pnpm install
 pnpm migrate              # 生成并应用数据库迁移
 pnpm seed                 # 首个管理员 + 示例项目 + 示例 agent（打印一次性 token）
 pnpm dev                  # API → http://127.0.0.1:3000 ，OpenAPI 文档 → /docs
+pnpm --filter @agentpm/web dev   # Web UI → http://localhost:5173（登录 admin）
 ```
 
 ### 3. 让你的 Agent 接入 MCP
@@ -100,9 +102,9 @@ pnpm test                 # 全量测试（含并发抢单竞争测试）
 
 ```
 apps/
-  api/          Fastify 5 · REST /v1/*（OpenAPI /docs）· MCP Streamable HTTP /v1/mcp
+  api/          Fastify 5 · REST /v1/*（OpenAPI /docs）· MCP Streamable HTTP /v1/mcp · SSE 活动流
   mcp-stdio/    stdio 网关（零依赖 JSON-RPC 管道，桥接任意 MCP 客户端）
-  web/          Web UI（M3，规划中）
+  web/          React 19 + Vite + Tailwind：看板/抽屉/Agent/审批/实时活动流/总览
 packages/
   core/         领域服务层（认证/RBAC/issue/回归/审批）· 一切写操作落审计，REST 与 MCP 共用
   db/           Prisma 6 schema · 迁移 · seed · 默认工作流
@@ -115,7 +117,7 @@ packages/
 
 ## 路线图
 
-M0–M2（治理 + 核心 API + MCP）已完成；M3 Web UI → M4 协作报表 → M5 **AI PM 替身 + 监控中心** → M6 v0.1 发布。详见 [docs/roadmap.md](./docs/roadmap.md)。
+M0–M3（治理 + 核心 API + MCP + Web UI）已完成；M4 协作报表 → M5 **AI PM 替身 + 监控中心** → M6 v0.1 发布。详见 [docs/roadmap.md](./docs/roadmap.md)。
 
 ## 参与贡献
 
