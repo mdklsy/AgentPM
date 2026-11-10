@@ -10,6 +10,7 @@ import { useAction, useApi } from '../api/hooks.js';
 import type { IssueDetail, ProjectDetail } from '../api/types.js';
 import type { Me } from '../auth.js';
 import { Markdown } from './Markdown.js';
+import { Avatar } from './ui.js';
 import {
   ActorChip,
   ErrorText,
@@ -505,12 +506,12 @@ export function IssueDrawer({
                   )}
                 </div>
                 <div className="mt-2">
-                  <textarea
+                  <MentionTextarea
                     value={comment}
-                    onChange={(e) => setComment(e.target.value)}
+                    onChange={setComment}
+                    members={detail.members}
+                    placeholder="添加评论…支持 Markdown；输入 @ 唤起成员联想"
                     rows={2}
-                    placeholder="添加评论…支持 Markdown；@账号名 提醒成员"
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                   />
                   {commentAction.error && <ErrorText>{commentAction.error}</ErrorText>}
                   <div className="mt-1 flex justify-end">
@@ -536,6 +537,128 @@ export function IssueDrawer({
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * 带 @成员联想的评论输入框：
+ * 输入「@」或在 @ 后继续输入时弹出项目成员建议（匹配账号/姓名前缀），
+ * ↑↓ 选择、Enter/Tab 补全、Esc 关闭；鼠标点击同样可补全。
+ */
+function MentionTextarea({
+  value,
+  onChange,
+  members,
+  placeholder,
+  rows = 2,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  members: Array<{ name: string; displayName: string; avatarUrl: string | null }>;
+  placeholder?: string;
+  rows?: number;
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  // query.start = '@' 在文本中的下标；query.text = @ 之后的输入片段；null = 联想关闭
+  const [query, setQuery] = useState<{ start: number; text: string } | null>(null);
+  const [hi, setHi] = useState(0); // 高亮索引
+
+  const items = query
+    ? members
+        .filter(
+          (m) =>
+            m.name.toLowerCase().startsWith(query.text.toLowerCase()) ||
+            m.displayName.toLowerCase().includes(query.text.toLowerCase()),
+        )
+        .slice(0, 6)
+    : [];
+
+  /** 从光标位置向前解析「@片段」：@ 必须在行首或前面是空白（避免命中邮箱）。 */
+  const parse = (text: string, pos: number) => {
+    const before = text.slice(0, pos);
+    const m = /(^|\s)@([\w-]*)$/.exec(before);
+    if (!m) return null;
+    return { start: pos - m[2]!.length - 1, text: m[2]! };
+  };
+
+  const sync = (el: HTMLTextAreaElement) => {
+    setQuery(parse(el.value, el.selectionStart ?? el.value.length));
+    setHi(0);
+  };
+
+  const pick = (name: string) => {
+    if (!query) return;
+    const pos = (ref.current?.selectionStart ?? query.start + 1 + query.text.length);
+    const next = `${value.slice(0, query.start)}@${name} ${value.slice(pos)}`;
+    onChange(next);
+    setQuery(null);
+    // 光标落到补全文本之后
+    const caret = query.start + name.length + 2;
+    requestAnimationFrame(() => {
+      ref.current?.focus();
+      ref.current?.setSelectionRange(caret, caret);
+    });
+  };
+
+  return (
+    <div className="relative">
+      <textarea
+        ref={ref}
+        value={value}
+        rows={rows}
+        placeholder={placeholder}
+        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+        onChange={(e) => {
+          onChange(e.target.value);
+          sync(e.currentTarget);
+        }}
+        onClick={(e) => sync(e.currentTarget)}
+        onKeyUp={(e) => sync(e.currentTarget)}
+        onBlur={() => {
+          // 点击建议项用 onMouseDown 抢在 blur 前完成，这里延迟关闭兜底
+          window.setTimeout(() => setQuery(null), 150);
+        }}
+        onKeyDown={(e) => {
+          if (!query || items.length === 0) return;
+          if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setHi((h) => (h + 1) % items.length);
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setHi((h) => (h - 1 + items.length) % items.length);
+          } else if (e.key === 'Enter' || e.key === 'Tab') {
+            e.preventDefault();
+            pick(items[hi]!.name);
+          } else if (e.key === 'Escape') {
+            setQuery(null);
+          }
+        }}
+      />
+      {query && items.length > 0 && (
+        <div className="absolute bottom-full left-0 z-20 mb-1 w-72 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+          <p className="border-b border-slate-100 px-3 py-1.5 text-[11px] text-slate-400">
+            选择要 @ 的成员（↑↓ 选择，Enter 补全）
+          </p>
+          {items.map((m, i) => (
+            <button
+              key={m.name}
+              // onMouseDown 抢在 textarea blur 之前完成补全
+              onMouseDown={(e) => {
+                e.preventDefault();
+                pick(m.name);
+              }}
+              className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm ${
+                i === hi ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <Avatar name={m.displayName || m.name} avatarUrl={m.avatarUrl} className="h-5 w-5" />
+              <span className="font-mono text-xs">{m.name}</span>
+              <span className="truncate text-xs text-slate-400">{m.displayName}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

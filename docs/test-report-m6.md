@@ -79,6 +79,7 @@
 | GUI-12 | 保存过滤器 chips | ✅ 搜索「部署」→保存「部署相关」→ chip 应用 | （DOM 验证） |
 | GUI-13 | 团队页实例概览 | ✅ 管理员可见：7 用户/1 项目/12 Issue/5 Token/7 日活跃 27 + 邮件状态标签 | （DOM 验证） |
 | GUI-14 | 工时登记 | ✅ 登记 60 分钟 → 合计与列表即时更新 | m6_04_drawer_markdown_worklog.png |
+| GUI-16 | 评论 @成员联想 | ✅ 输入 @wa 弹出 watcher/wang-mei；Enter 补全为 @watcher+空格，光标落位正确，菜单关闭 | m6_16_mention_autocomplete.png |
 
 未抽测项（GUI-03/06/07/08/09/15）：对应服务端逻辑均有自动化覆盖（ATT-01~09、CSV-01~09、BULK-01~09、FLD-01~12、REL-01~10、通知类型表），UI 表单与后端字段一一对应，风险低。
 
