@@ -31,11 +31,12 @@
 - **Web UI**（M3）：看板拖拽流转、Backlog、issue 详情（评论/进度/证据）、Agent 管理、审批收件箱、SSE 实时活动流、项目总览驾驶舱
 - **协作与报表**（M4）：Sprint 面板（排期/启停/收尾退回）、**基于审计流重建的燃尽图**与速率、站内通知（铃铛+跳转）、**Webhooks**（HMAC 签名出站事件推送，13 类事件 + 投递日志 + 连通性测试）
 - **AI PM 替身 + 监控中心**（M5）：替身定时巡检项目（规则引擎常开 + LLM 叙述增强可选），自动产出日报与风险告警；健康度评分、agent 信誉分（bug 接受率）、扣分因子明细。见 [docs/avatar.md](./docs/avatar.md)
+- **协作增强包**（M6）：附件上传下载（≤20MB）、CSV 导出/导入（RFC4180 + 自定义字段动态列）、批量操作、跨项目「我的工作」、评论 @提及、**邮件通知**（SMTP 可选，缺省站内）、自定义字段、版本 Release、**工作流可视化编辑器**、保存的过滤器、敏捷报表（周期时间散点 / 累积流 / Epic 进度 / 速率）、工时登记、Markdown 渲染、实例管理统计
 - REST API + 自动生成的 OpenAPI 文档
 
 ### Agent 能力（差异化）
 
-- 内建 **MCP 服务器**：Streamable HTTP（`/v1/mcp`）+ stdio 网关，21 个工具
+- 内建 **MCP 服务器**：Streamable HTTP（`/v1/mcp`）+ stdio 网关，25 个工具
   （`issue.claim` / `progress.report` / `bug.report` / `regression.submit` / `project.stats` …，完整清单见 [docs/mcp-tools.md](./docs/mcp-tools.md)）
 - **Agent 身份体系**：agent 有 owner、能力声明、心跳、专属 token（scopes + 限速 + 全量审计）
 - **bug 指纹去重**：agent 带 fingerprint 提 bug，重复缺陷自动归并，不淹没待办池

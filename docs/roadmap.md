@@ -61,9 +61,16 @@
 - 监控中心页：项目健康度评分环（与规则引擎同口径）+ 扣分因子、agent 信誉分（bug 接受率/完成量）、替身状态与报告流
 - 使用指南：[docs/avatar.md](./avatar.md)；后续增强（M5.x）：事件驱动实时触发、替身代执行建议动作（仍走审批）、细粒度白名单
 
-## M6 v0.1 正式发布
+## M6 P0/P1 协作增强包 ✅（2026-11-10）
+
+对标 Jira 基础盘 15 项缺口全部交付（盘点见 [jira-gap-analysis.md](./jira-gap-analysis.md)，测试报告 [test-report-m6.md](./test-report-m6.md)：138 用例全绿）：
+
+- **P0**：附件上传下载（≤20MB 本地磁盘）、CSV 导出/导入（RFC4180 + 自定义字段动态列 + 幂等往返）、评论 @提及（限项目成员）、批量操作（流转/指派/优先级/sprint，逐项独立失败）、跨项目「我的工作」（/my 三列表 + 首页工作台卡）、邮件通知（SMTP 可选注入 mailer，失败静默）、实例管理统计（/team 概览卡）
+- **P1**：自定义字段（text/number/date/select + 抽屉行内编辑）、版本 Release（完成度统计 + SetNull）、工作流可视化编辑器（状态行 + 迁移勾选矩阵，保存即时生效）、保存的过滤器（Board chips）、敏捷报表（周期散点 P50/P85 + 累积流 + Epic 进度 + 速率）、Markdown 渲染（marked+DOMPurify）、工时登记（预计/已登记/合计）、首页工作台
+- MCP 新增 `report.agile` / `my.work`（21→25 工具）；测试驱动修复 6 个真实缺陷（详见测试报告 §3）
+
+## M7 v0.1 正式发布（规划）
 
 - 中英双语 i18n、文档站、安全加固 pass（依赖审计、渗透自查清单）
-- P0 基本盘补齐（见 [jira-gap-analysis.md](./jira-gap-analysis.md)）：附件文件上传、CSV 导出/导入、评论 @提及、批量操作、"我的工作"跨项目视图、邮件通知
 - 一键部署（docker-compose / Helm 骨架）、演示数据一键导入
 - GitHub 开源发布（banner、announce、Discussion 引导）
