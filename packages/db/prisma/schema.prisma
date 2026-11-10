@@ -129,6 +129,9 @@ model Actor {
   approvalDecided    ApprovalRequest[] @relation("ApprovalDecider")
   notifications      Notification[]
   reportsAuthored    Report[] @relation("ReportAuthor")
+  attachmentsUploaded Attachment[] @relation("AttachmentUploader")
+  worklogs           Worklog[]
+  savedFilters       SavedFilter[]
 }
 
 /// Agent 附加档案：owner、能力声明、心跳。
@@ -193,6 +196,9 @@ model Project {
   approvalRequests ApprovalRequest[]
   webhooks         Webhook[]
   reports          Report[]
+  customFields     CustomFieldDef[]
+  releases         Release[]
+  savedFilters     SavedFilter[]
 }
 
 model Member {
@@ -288,6 +294,10 @@ model Issue {
   dueDate       DateTime?
   sprintId      String?
   sprint        Sprint?        @relation(fields: [sprintId], references: [id], onDelete: SetNull)
+  releaseId     String?
+  release       Release?       @relation(fields: [releaseId], references: [id], onDelete: SetNull)
+  /// 工时预估（分钟）
+  estimateMinutes Int?
   /// bug 去重指纹（如 test:Class#method）
   fingerprint   String?        @db.VarChar(191)
   environment   String?        @db.VarChar(255)
@@ -305,6 +315,8 @@ model Issue {
   attachments     Attachment[]
   progressReports ProgressReport[]
   activities      Activity[]
+  fieldValues     IssueFieldValue[]
+  worklogs        Worklog[]
 
   @@index([projectId, number])
   @@index([projectId, type])
@@ -312,6 +324,7 @@ model Issue {
   @@index([projectId, updatedAt])
   @@index([assigneeId])
   @@index([sprintId])
+  @@index([releaseId])
   @@index([fingerprint])
 }
 
@@ -363,16 +376,94 @@ model Watcher {
 }
 
 model Attachment {
-  id          String   @id @default(cuid())
-  issueId     String
-  issue       Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
-  name        String   @db.VarChar(255)
-  /// M1 为 URL 型附件（外部链接）；文件存储 M4 提供
-  url         String   @db.VarChar(1024)
-  mimeType    String?  @db.VarChar(128)
-  sizeBytes   Int?
+  id           String   @id @default(cuid())
+  issueId      String
+  issue        Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  name         String   @db.VarChar(255)
+  /// 文件在磁盘上的存储路径（M6 起本地盘存储；url 字段保留对外下载路径）
+  url          String   @db.VarChar(1024)
+  mimeType     String?  @db.VarChar(128)
+  sizeBytes    Int?
   uploadedById String
-  createdAt   DateTime @default(now())
+  uploadedBy   Actor    @relation("AttachmentUploader", fields: [uploadedById], references: [id])
+  createdAt    DateTime @default(now())
+}
+
+/// 版本（M6）：issue 的发布容器，Sprint 之外的第二维度
+model Release {
+  id          String    @id @default(cuid())
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String    @db.VarChar(128)
+  status      String    @default("planned") @db.VarChar(16) // planned | released | archived
+  releaseDate DateTime?
+  description String?   @db.VarChar(2000)
+  createdAt   DateTime  @default(now())
+  issues      Issue[]
+
+  @@unique([projectId, name])
+}
+
+/// 自定义字段定义（M6，项目级）
+model CustomFieldDef {
+  id        String @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String @db.VarChar(64)
+  /// text | number | date | select
+  type      String @db.VarChar(16)
+  /// select 类型的可选项（Json string[]）
+  options   Json   @default("[]")
+  /// 适用 issue 类型（Json string[]，["ALL"] 或 IssueType 子集）
+  appliesTo Json   @default("[\"ALL\"]")
+  sortOrder Int    @default(0)
+  createdAt DateTime @default(now())
+  values    IssueFieldValue[]
+
+  @@unique([projectId, name])
+}
+
+/// issue 的自定义字段值（M6）
+model IssueFieldValue {
+  id      String @id @default(cuid())
+  issueId String
+  issue   Issue  @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  fieldId String
+  field   CustomFieldDef @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  value   Json?
+
+  @@unique([issueId, fieldId])
+}
+
+/// 工时登记（M6）
+model Worklog {
+  id      String   @id @default(cuid())
+  issueId String
+  issue   Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  actorId String
+  actor   Actor    @relation(fields: [actorId], references: [id])
+  minutes Int
+  spentAt DateTime @default(now())
+  comment String?  @db.VarChar(1000)
+  createdAt DateTime @default(now())
+
+  @@index([issueId, spentAt])
+}
+
+/// 保存的过滤器（M6，项目级）
+model SavedFilter {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String   @db.VarChar(64)
+  /// SearchIssuesQuery 的 JSON 快照
+  query     Json
+  ownerId   String
+  owner     Actor    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  shared    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([projectId, ownerId])
 }
 
 /// agent/人的结构化进度汇报

@@ -55,7 +55,9 @@ async function main() {
   let apCount = 0;
   for (const ap of approvals) {
     const payload = (ap.payload ?? {}) as { toState?: string };
-    const toState = payload.toState ? (LEGACY_STATE_NAME_MAP[payload.toState] ?? payload.toState) : payload.toState;
+    const toState = payload.toState
+      ? (LEGACY_STATE_NAME_MAP[payload.toState] ?? payload.toState)
+      : payload.toState;
     if (toState !== payload.toState) {
       await db.approvalRequest.update({
         where: { id: ap.id },
