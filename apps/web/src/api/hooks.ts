@@ -7,7 +7,7 @@ export interface ApiState<T> {
   loading: boolean;
 }
 
-/** 极简数据获取 hook：path 为 null 时不请求；返回 reload 手动刷新。 */
+/** 极简数据获取 hook：path 为 null 时不请求；reload 为后台静默刷新（保留旧数据，页面不闪）。 */
 export function useApi<T>(path: string | null): ApiState<T> & { reload: () => void } {
   const [state, setState] = useState<ApiState<T>>({
     data: undefined,
@@ -15,6 +15,7 @@ export function useApi<T>(path: string | null): ApiState<T> & { reload: () => vo
     loading: path !== null,
   });
   const version = useRef(0);
+  const lastPath = useRef<string | null>(path);
 
   const load = useCallback(async () => {
     if (!path) {
@@ -22,17 +23,23 @@ export function useApi<T>(path: string | null): ApiState<T> & { reload: () => vo
       return;
     }
     const v = ++version.current;
-    setState((s) => ({ ...s, loading: true, error: undefined }));
+    // 仅 path 变化或首次加载时进入 loading（整页骨架）；同 path 的 reload 静默后台刷新，
+    // 避免操作成功后整个页面被 Spinner 替换、页签/滚动位置丢失（视觉上像整页刷新）
+    const pathChanged = lastPath.current !== path;
+    lastPath.current = path;
+    setState((s) =>
+      pathChanged || !s.data ? { ...s, loading: true, error: undefined } : { ...s, error: undefined },
+    );
     try {
       const data = await api.get<T>(path);
       if (v === version.current) setState({ data, error: undefined, loading: false });
     } catch (e) {
       if (v === version.current)
-        setState({
-          data: undefined,
+        setState((s) => ({
+          data: pathChanged ? undefined : s.data, // path 变化后的失败回到空态；同 path 保留旧数据
           error: e instanceof ApiError ? e.message : String(e),
           loading: false,
-        });
+        }));
     }
   }, [path]);
 
