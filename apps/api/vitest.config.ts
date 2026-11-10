@@ -13,8 +13,9 @@ export default defineConfig({
     setupFiles: ['./test/setup-env.ts'],
     testTimeout: 30_000,
     hookTimeout: 120_000,
-    // 共享测试库：文件间不并行
-    fileParallelism: false,
+    // M6：文件并行但最多 2 个 fork（测试库共享，用例都用随机后缀世界隔离）
+    fileParallelism: true,
+    poolOptions: { forks: { maxForkThreads: 2 } },
     include: ['test/**/*.test.ts'],
   },
 });

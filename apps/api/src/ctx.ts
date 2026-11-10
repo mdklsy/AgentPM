@@ -14,6 +14,7 @@ export function makeCtx(app: FastifyApp, req: FastifyRequest, overrides: Partial
     source: (req.authKind === 'API' ? 'API' : 'WEB') as ActivitySource,
     ip: req.ip,
     userAgent: req.headers['user-agent'] ?? undefined,
+    appUrl: app.config.appUrl,
     ...overrides,
   };
 }

@@ -1,11 +1,13 @@
 import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import {
+  agileReport,
   getCurrentSprint,
   getProjectDetail,
   listBacklog,
   listProjectsForActor,
   listSprints,
+  myWork,
   projectStats,
   queryActivities,
   searchIssues,
@@ -106,6 +108,27 @@ export function createAgentPmMcpServer(opts: { ctx: Ctx }): McpServer {
       inputSchema: { projectKey: z.string() },
     },
     async ({ projectKey }) => json({ sprint: await getCurrentSprint(ctx, projectKey) }),
+  );
+
+  server.registerTool(
+    'report.agile',
+    {
+      title: '敏捷报表',
+      description:
+        '周期时长（控制图数据）、累积流图逐日快照、Epic 进度（递归子孙）。agent 汇报或巡检时用。',
+      inputSchema: { projectKey: z.string() },
+    },
+    async ({ projectKey }) => json(await agileReport(ctx, projectKey)),
+  );
+
+  server.registerTool(
+    'my.work',
+    {
+      title: '我的工作',
+      description: '跨项目聚合：指派给我 / 我关注 / 我报告的 issue。',
+      inputSchema: {},
+    },
+    async () => json(await myWork(ctx)),
   );
 
   server.registerTool(

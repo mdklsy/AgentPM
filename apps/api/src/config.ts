@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 import { loadEnv } from '@agentpm/shared/node';
 
@@ -21,6 +22,18 @@ const EnvSchema = z.object({
     .default('0')
     .transform((v) => v === '1'),
   LOG_LEVEL: z.string().default('info'),
+  /** 附件落盘目录（M6）；默认仓库根 data/uploads */
+  ATTACHMENTS_DIR: z
+    .string()
+    .default(fileURLToPath(new URL('../../../../data/uploads', import.meta.url))),
+  /** 邮件通知（M6）：SMTP_HOST 缺省 = 邮件关闭 */
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().default(465),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().optional(),
+  /** 出现在邮件/通知链接里的对外地址 */
+  APP_URL: z.string().default('http://localhost:5173'),
 });
 
 export type AppConfig = z.infer<typeof EnvSchema>;

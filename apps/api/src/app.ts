@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
+import multipart from '@fastify/multipart';
 import jwt from '@fastify/jwt';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
@@ -20,6 +21,9 @@ import { registerWebhookRoutes } from './routes/webhooks.routes.js';
 import { registerReportRoutes } from './routes/reports.routes.js';
 import { registerAvatarRoutes } from './routes/avatar.routes.js';
 import { registerUserRoutes } from './routes/users.routes.js';
+import { registerAttachmentRoutes } from './routes/attachments.routes.js';
+import { registerIssueM6Routes } from './routes/issues-m6.routes.js';
+import { registerM6Routes } from './routes/m6.routes.js';
 import type { FastifyApp } from './types.js';
 
 export interface BuildAppOptions {
@@ -43,10 +47,20 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyApp> 
   app.decorate('config', {
     mcpRateLimitPerMin: cfg.MCP_RATE_LIMIT_PER_MIN,
     fulltextEnabled: cfg.FULLTEXT_ENABLED,
+    attachmentsDir: cfg.ATTACHMENTS_DIR,
+    appUrl: cfg.APP_URL,
+    smtp: {
+      host: cfg.SMTP_HOST,
+      port: cfg.SMTP_PORT,
+      user: cfg.SMTP_USER,
+      pass: cfg.SMTP_PASS,
+      from: cfg.SMTP_FROM,
+    },
   });
 
   await app.register(cookie);
   await app.register(jwt, { secret: cfg.JWT_SECRET });
+  await app.register(multipart, { limits: { fileSize: 20 * 1024 * 1024 } });
 
   if (cfg.CORS_ORIGINS) {
     const origins = cfg.CORS_ORIGINS.split(',')
@@ -92,6 +106,9 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyApp> 
   registerUserRoutes(app);
   registerProjectRoutes(app);
   registerIssueRoutes(app);
+  registerAttachmentRoutes(app);
+  registerIssueM6Routes(app);
+  registerM6Routes(app);
   registerEventRoutes(app);
   registerNotificationRoutes(app);
   registerWebhookRoutes(app);
