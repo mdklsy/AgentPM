@@ -1,13 +1,18 @@
 import { useOutletContext } from 'react-router-dom';
 import { useApi } from '../api/hooks.js';
-import type { ProjectStats } from '../api/types.js';
+import type { AgileReport, ProjectStats } from '../api/types.js';
 import type { ProjectPageCtx } from './ProjectLayout.js';
+import { CfdChart, CycleTimeChart, VelocityBars } from '../components/charts.js';
 import { ActorChip, Card, ErrorText, SourceBadge, Spinner, timeAgo } from '../components/ui.js';
 
-/** 项目总览：进度 + 人机负载 + agent 状态 + 7 日活跃 —— 给 PM（和未来的替身）看的驾驶舱 */
+/** 项目总览：进度 + 人机负载 + agent 状态 + 7 日活跃 + 敏捷报表 —— 给 PM（和未来的替身）看的驾驶舱 */
 export function OverviewPage() {
   const { projectKey } = useOutletContext<ProjectPageCtx>();
   const { data, loading, error } = useApi<ProjectStats>(`/v1/projects/${projectKey}/stats`);
+  const agile = useApi<AgileReport>(`/v1/projects/${projectKey}/reports/agile`);
+  const velocity = useApi<{ items: Array<{ name: string; done: number; total: number }> }>(
+    `/v1/projects/${projectKey}/velocity`,
+  );
 
   if (loading) return <Spinner />;
   if (error) return <ErrorText>{error}</ErrorText>;
@@ -123,6 +128,67 @@ export function OverviewPage() {
             共 {data.activity7d.total} 条 · WEB=网页 · API=token · MCP=agent · SYSTEM=审批代执行
           </span>
         </div>
+      </Card>
+
+      {/* 敏捷报表（M6） */}
+      <Card className="p-4 lg:col-span-2">
+        <h2 className="font-semibold text-slate-700">敏捷报表</h2>
+        <p className="text-xs text-slate-400">
+          从活动流回放：周期时间（进入进行中→完成的天数）、累积流（逐日待办/进行中/完成）、Epic 进度
+        </p>
+        {agile.loading && <Spinner />}
+        {agile.error && <ErrorText>{agile.error}</ErrorText>}
+        {agile.data && (
+          <div className="mt-3 grid gap-5">
+            <div>
+              <h3 className="mb-1 text-xs font-semibold text-slate-500">
+                周期时间（{agile.data.cycleTimes.length} 个已完成 · 越低越快）
+              </h3>
+              <CycleTimeChart data={agile.data.cycleTimes} />
+            </div>
+            <div>
+              <h3 className="mb-1 text-xs font-semibold text-slate-500">
+                累积流（面积带 = 各状态 issue 数）
+              </h3>
+              <CfdChart data={agile.data.cfd} />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <h3 className="mb-1.5 text-xs font-semibold text-slate-500">Epic 进度</h3>
+                {agile.data.epics.length === 0 && (
+                  <p className="text-xs text-slate-300">还没有 Epic</p>
+                )}
+                <div className="space-y-2">
+                  {agile.data.epics.map((e) => (
+                    <div key={e.key} className="text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-[11px] text-slate-400">{e.key}</span>
+                        <span className="flex-1 truncate text-slate-600">{e.title}</span>
+                        <span className="text-xs text-slate-400">
+                          {e.done}/{e.total}
+                        </span>
+                      </div>
+                      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                        <div
+                          className="h-full rounded-full bg-violet-500"
+                          style={{
+                            width: `${e.total > 0 ? Math.round((e.done / e.total) * 100) : 0}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <h3 className="mb-1.5 text-xs font-semibold text-slate-500">
+                  速率趋势（近几个 Sprint）
+                </h3>
+                <VelocityBars items={velocity.data?.items ?? []} />
+              </div>
+            </div>
+          </div>
+        )}
       </Card>
     </div>
   );

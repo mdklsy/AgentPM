@@ -9,7 +9,7 @@ import {
 } from '@ant-design/icons';
 import { api } from '../api/client.js';
 import { useAction, useApi } from '../api/hooks.js';
-import type { ActorType } from '../api/types.js';
+import type { ActorType, InstanceStats } from '../api/types.js';
 import {
   Avatar,
   Card,
@@ -70,6 +70,57 @@ async function fileToAvatarDataUrl(file: File): Promise<string> {
   return canvas.toDataURL('image/jpeg', 0.85);
 }
 
+/** 实例概览（M6，仅管理员）：全站计数 + 附件占用 + 7 日活跃 + 邮件配置状态。 */
+function AdminStatsCard() {
+  const { data, loading, error } = useApi<InstanceStats>('/v1/admin/stats');
+  if (error) return null; // 非管理员 403 静默隐藏
+  if (loading)
+    return (
+      <Card className="p-4">
+        <Spinner />
+      </Card>
+    );
+  if (!data) return null;
+  const fmtBytes = (b: number) =>
+    b > 1024 * 1024
+      ? `${(b / 1024 / 1024).toFixed(1)} MB`
+      : `${Math.max(1, Math.round(b / 1024))} KB`;
+  return (
+    <Card className="p-4">
+      <div className="mb-2 flex items-center gap-2">
+        <h2 className="font-semibold text-slate-800">实例概览</h2>
+        <span
+          className={`rounded-full px-2 py-0.5 text-[11px] ${
+            data.mailConfigured ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'
+          }`}
+          title={data.mailConfigured ? 'SMTP 已配置，通知会发邮件' : '未配置 SMTP，通知只在站内'}
+        >
+          邮件{data.mailConfigured ? '已开启' : '未配置'}
+        </span>
+      </div>
+      <div className="grid grid-cols-3 gap-2 text-center text-sm sm:grid-cols-6">
+        {[
+          ['用户', data.users, 'text-slate-700'],
+          ['项目', data.activeProjects, 'text-indigo-600'],
+          ['Issue', data.issues, 'text-slate-700'],
+          ['Token', data.activeTokens, 'text-slate-700'],
+          [
+            '附件',
+            `${data.attachments.count} / ${fmtBytes(data.attachments.totalBytes)}`,
+            'text-slate-700',
+          ],
+          ['7 日活跃', data.activity7d, 'text-emerald-600'],
+        ].map(([label, v, cls]) => (
+          <div key={String(label)} className="rounded-lg bg-slate-50 py-2.5">
+            <div className={`truncate px-1 text-lg font-bold ${cls}`}>{v as string}</div>
+            <div className="text-xs text-slate-400">{label as string}</div>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 export function TeamPage() {
   const { me, refresh } = useAuth();
   const [q, setQ] = useState('');
@@ -120,6 +171,7 @@ export function TeamPage() {
       </header>
 
       <div className="mx-auto max-w-4xl space-y-4 p-6">
+        {isAdmin && <AdminStatsCard />}
         {action.error && <ErrorText>{action.error}</ErrorText>}
         {action.message && <SuccessText>{action.message}</SuccessText>}
 

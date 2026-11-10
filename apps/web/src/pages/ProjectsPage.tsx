@@ -1,10 +1,89 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { PlusOutlined, TeamOutlined } from '@ant-design/icons';
+import {
+  BellOutlined,
+  PlusOutlined,
+  RightOutlined,
+  TeamOutlined,
+  UserOutlined,
+} from '@ant-design/icons';
 import { api } from '../api/client.js';
 import { useAction, useApi } from '../api/hooks.js';
 import type { ProjectSummary } from '../api/types.js';
 import { Card, EmptyState, ErrorText, Modal, Spinner } from '../components/ui.js';
+
+interface NotifRow {
+  id: string;
+  type: string;
+  readAt: string | null;
+  payload: Record<string, unknown>;
+}
+
+/** 首页工作台卡：我的未完成 / @提及提醒 / 快捷入口。 */
+function WorkbenchCard() {
+  const work = useApi<{
+    assigned: Array<{ stateCategory: string }>;
+    watching: unknown[];
+    reported: unknown[];
+  }>('/v1/my/work');
+  const notifs = useApi<{ items: NotifRow[] }>('/v1/notifications?limit=50');
+
+  const openCount = work.data?.assigned.filter((i) => i.stateCategory !== 'DONE').length ?? 0;
+  const mentionCount =
+    notifs.data?.items.filter((n) => n.type === 'comment.mentioned' && !n.readAt).length ?? 0;
+  if (work.error && notifs.error) return null;
+
+  return (
+    <Card className="mb-4 p-4">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Link
+          to="/my"
+          className="flex items-center gap-3 rounded-xl bg-indigo-50 px-4 py-3 transition hover:bg-indigo-100"
+        >
+          <UserOutlined className="text-xl text-indigo-500" aria-hidden />
+          <span>
+            <span className="block text-lg font-bold text-indigo-700">{openCount}</span>
+            <span className="block text-xs text-slate-500">我的未完成</span>
+          </span>
+          <RightOutlined className="ml-auto text-xs text-indigo-300" aria-hidden />
+        </Link>
+        <Link
+          to="/team"
+          className="flex items-center gap-3 rounded-xl bg-slate-50 px-4 py-3 transition hover:bg-slate-100"
+        >
+          <BellOutlined
+            className={`text-xl ${mentionCount > 0 ? 'text-red-500' : 'text-slate-400'}`}
+            aria-hidden
+          />
+          <span>
+            <span
+              className={`block text-lg font-bold ${mentionCount > 0 ? 'text-red-600' : 'text-slate-700'}`}
+            >
+              {mentionCount}
+            </span>
+            <span className="block text-xs text-slate-500">@提及未读</span>
+          </span>
+          <RightOutlined className="ml-auto text-xs text-slate-300" aria-hidden />
+        </Link>
+        <div className="flex items-center gap-2 rounded-xl bg-slate-50 px-4 py-3">
+          <span className="text-xs font-medium text-slate-500">快捷入口：</span>
+          <Link
+            to="/my"
+            className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
+          >
+            我的工作
+          </Link>
+          <Link
+            to="/team"
+            className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
+          >
+            团队成员
+          </Link>
+        </div>
+      </div>
+    </Card>
+  );
+}
 
 export function ProjectsPage() {
   const { data, loading, error, reload } = useApi<{ projects: ProjectSummary[] }>('/v1/projects');
@@ -20,13 +99,22 @@ export function ProjectsPage() {
           <h1 className="text-xl font-bold text-slate-800">我的项目</h1>
           <p className="text-sm text-slate-500">人类与 agent 共享同一份项目视图</p>
         </div>
-        <Link
-          to="/team"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
-        >
-          <TeamOutlined aria-hidden />
-          团队成员
-        </Link>
+        <span className="flex items-center gap-2">
+          <Link
+            to="/my"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+          >
+            <UserOutlined aria-hidden />
+            我的工作
+          </Link>
+          <Link
+            to="/team"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+          >
+            <TeamOutlined aria-hidden />
+            团队成员
+          </Link>
+        </span>
         <button
           className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
           onClick={() => setCreating(true)}
@@ -35,6 +123,8 @@ export function ProjectsPage() {
           创建项目
         </button>
       </div>
+
+      <WorkbenchCard />
 
       {loading && <Spinner />}
       {error && <ErrorText>{error}</ErrorText>}

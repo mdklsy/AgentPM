@@ -10,10 +10,12 @@ import { BacklogPage } from './pages/BacklogPage.js';
 import { BoardPage } from './pages/BoardPage.js';
 import { LoginPage } from './pages/LoginPage.js';
 import { MembersPage } from './pages/MembersPage.js';
+import { MyWorkPage } from './pages/MyWorkPage.js';
 import { OverviewPage } from './pages/OverviewPage.js';
 import { ProjectLayout } from './pages/ProjectLayout.js';
 import { ProjectsPage } from './pages/ProjectsPage.js';
 import { RegressionsPage } from './pages/RegressionsPage.js';
+import { SettingsPage } from './pages/SettingsPage.js';
 import { SprintPage } from './pages/SprintPage.js';
 import { TeamPage } from './pages/TeamPage.js';
 import { WebhooksPage } from './pages/WebhooksPage.js';
@@ -49,6 +51,7 @@ export function App() {
       <Route path="/login" element={<Navigate to="/" replace />} />
       <Route path="/" element={<ProjectsPage />} />
       <Route path="/team" element={<TeamPage />} />
+      <Route path="/my" element={<MyWorkPage />} />
       <Route path="/p/:key" element={<ProjectLayout />}>
         <Route index element={<BoardPage />} />
         <Route path="sprint" element={<SprintPage />} />
@@ -59,6 +62,7 @@ export function App() {
         <Route path="approvals" element={<ApprovalsPage />} />
         <Route path="regressions" element={<RegressionsPage />} />
         <Route path="members" element={<MembersPage />} />
+        <Route path="settings" element={<SettingsPage />} />
         <Route path="webhooks" element={<WebhooksPage />} />
         <Route path="monitoring" element={<MonitoringPage />} />
       </Route>

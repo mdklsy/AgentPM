@@ -1,9 +1,15 @@
-import { useState } from 'react';
-import { ArrowRightOutlined, CloseOutlined, PaperClipOutlined } from '@ant-design/icons';
+import { useRef, useState } from 'react';
+import {
+  ArrowRightOutlined,
+  CloseOutlined,
+  PaperClipOutlined,
+  UploadOutlined,
+} from '@ant-design/icons';
 import { api } from '../api/client.js';
 import { useAction, useApi } from '../api/hooks.js';
 import type { IssueDetail, ProjectDetail } from '../api/types.js';
 import type { Me } from '../auth.js';
+import { Markdown } from './Markdown.js';
 import {
   ActorChip,
   ErrorText,
@@ -14,7 +20,7 @@ import {
   timeAgo,
 } from './ui.js';
 
-/** issue 详情抽屉：流转 / 领取 / 指派 / 评论 / 进度汇报 */
+/** issue 详情抽屉（M6 扩展）：流转/领取/指派/评论(@提及)/进度/附件/工时/自定义字段/版本 */
 export function IssueDrawer({
   issueKey,
   detail,
@@ -41,6 +47,12 @@ export function IssueDrawer({
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionInfo, setActionInfo] = useState<string | null>(null);
   const commentAction = useAction();
+  const uploadAction = useAction();
+  const worklogAction = useAction();
+  const fieldAction = useAction();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [worklogMinutes, setWorklogMinutes] = useState('');
+  const [worklogComment, setWorklogComment] = useState('');
 
   const workflow = detail.workflows.find((w) => w.issueType === issue?.issue.type);
   const allowedNext = (
@@ -76,6 +88,16 @@ export function IssueDrawer({
   };
 
   const d = issue?.issue;
+
+  /** 上传附件：multipart → api.upload。 */
+  const uploadFile = async (file: File) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    const ok = await uploadAction.run(() =>
+      api.upload(`/v1/issues/${d?.issueKey}/attachments`, fd),
+    );
+    if (ok !== undefined) reload();
+  };
 
   return (
     <div className="fixed inset-0 z-30 flex justify-end bg-slate-900/30" onClick={onClose}>
@@ -192,17 +214,185 @@ export function IssueDrawer({
             </div>
 
             <div className="flex-1 space-y-5 px-5 py-4">
-              {/* 描述 */}
+              {/* 描述（Markdown 渲染） */}
               <section>
                 <h3 className="mb-1 text-xs font-semibold tracking-wide text-slate-400">描述</h3>
-                <div className="whitespace-pre-wrap rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
-                  {d.description || '（无描述）'}
-                </div>
+                {d.description ? (
+                  <Markdown text={d.description} className="rounded-lg bg-slate-50 p-3" />
+                ) : (
+                  <div className="rounded-lg bg-slate-50 p-3 text-sm text-slate-300">
+                    （无描述）
+                  </div>
+                )}
                 <div className="mt-1 flex gap-3 text-xs text-slate-400">
                   <span>报告人 {d.reporter}</span>
                   {d.fingerprint && <span>指纹 {d.fingerprint}</span>}
                   {d.environment && <span>环境 {d.environment}</span>}
                 </div>
+              </section>
+
+              {/* 属性区：自定义字段 + 版本（M6） */}
+              {(d.fields.length > 0 || d.release) && (
+                <section>
+                  <h3 className="mb-1 text-xs font-semibold tracking-wide text-slate-400">属性</h3>
+                  <div className="space-y-1.5 rounded-lg bg-slate-50 p-3">
+                    {d.release && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="w-28 shrink-0 text-xs text-slate-400">版本</span>
+                        <span className="rounded bg-indigo-100 px-1.5 py-0.5 text-xs font-medium text-indigo-700">
+                          {d.release.name}
+                        </span>
+                      </div>
+                    )}
+                    {d.fields.map((f) => (
+                      <FieldRow
+                        key={f.fieldId}
+                        field={f}
+                        disabled={busy}
+                        onSaved={(v) =>
+                          fieldAction
+                            .run(() =>
+                              api.put(`/v1/issues/${d.issueKey}/fields`, {
+                                values: { [f.fieldId]: v },
+                              }),
+                            )
+                            .then((r) => {
+                              if (r !== undefined) reload();
+                              return r;
+                            })
+                        }
+                      />
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* 附件（M6） */}
+              <section>
+                <div className="mb-1 flex items-center gap-2">
+                  <h3 className="text-xs font-semibold tracking-wide text-slate-400">
+                    附件（≤20MB）
+                  </h3>
+                  <button
+                    className="ml-auto inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs text-indigo-600 hover:bg-indigo-50"
+                    onClick={() => fileRef.current?.click()}
+                    disabled={uploadAction.running}
+                  >
+                    <UploadOutlined aria-hidden />
+                    {uploadAction.running ? '上传中…' : '上传附件'}
+                  </button>
+                </div>
+                {uploadAction.error && <ErrorText>{uploadAction.error}</ErrorText>}
+                <input
+                  ref={fileRef}
+                  type="file"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) void uploadFile(f);
+                    e.target.value = '';
+                  }}
+                />
+                <div className="space-y-1">
+                  {d.attachments.map((a) => (
+                    <div
+                      key={a.id}
+                      className="flex items-center gap-2 rounded-lg border border-slate-100 px-2.5 py-1.5 text-sm"
+                    >
+                      <PaperClipOutlined className="text-slate-400" aria-hidden />
+                      <a
+                        href={a.url}
+                        className="min-w-0 flex-1 truncate text-sky-600 underline"
+                        download={a.name}
+                      >
+                        {a.name}
+                      </a>
+                      <span className="text-xs text-slate-400">
+                        {a.sizeBytes ? `${Math.ceil(a.sizeBytes / 1024)} KB · ` : ''}
+                        {a.uploadedBy}
+                      </span>
+                      <button
+                        className="rounded px-1.5 text-xs text-red-400 hover:bg-red-50"
+                        title="删除附件"
+                        onClick={() =>
+                          void act(
+                            () => api.del(`/v1/issues/${d.issueKey}/attachments/${a.id}`),
+                            '附件已删除',
+                          )
+                        }
+                      >
+                        删除
+                      </button>
+                    </div>
+                  ))}
+                  {d.attachments.length === 0 && (
+                    <div className="text-xs text-slate-300">暂无附件</div>
+                  )}
+                </div>
+              </section>
+
+              {/* 工时（M6） */}
+              <section>
+                <h3 className="mb-1 text-xs font-semibold tracking-wide text-slate-400">
+                  工时（预计 {d.estimateMinutes ? `${d.estimateMinutes} 分钟` : '未设'} · 已登记{' '}
+                  {d.worklogTotal} 分钟 = {Math.round((d.worklogTotal / 60) * 10) / 10} 小时）
+                </h3>
+                <div className="space-y-1">
+                  {d.worklogs.map((w) => (
+                    <div
+                      key={w.id}
+                      className="flex items-center gap-2 rounded-lg border border-slate-100 px-2.5 py-1.5 text-sm"
+                    >
+                      <ActorChip name={w.actor} />
+                      <span className="font-medium text-slate-600">{w.minutes} 分钟</span>
+                      {w.comment && (
+                        <span className="min-w-0 flex-1 truncate text-slate-400">{w.comment}</span>
+                      )}
+                      <span className="ml-auto text-xs text-slate-400">{timeAgo(w.spentAt)}</span>
+                    </div>
+                  ))}
+                  {d.worklogs.length === 0 && (
+                    <div className="text-xs text-slate-300">暂无工时</div>
+                  )}
+                </div>
+                <div className="mt-2 flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={1}
+                    value={worklogMinutes}
+                    onChange={(e) => setWorklogMinutes(e.target.value)}
+                    placeholder="分钟"
+                    className="w-24 rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
+                  />
+                  <input
+                    value={worklogComment}
+                    onChange={(e) => setWorklogComment(e.target.value)}
+                    placeholder="备注（可选）"
+                    className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm"
+                  />
+                  <button
+                    disabled={!worklogMinutes || worklogAction.running}
+                    className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                    onClick={async () => {
+                      const ok = await worklogAction.run(
+                        () =>
+                          api.post(`/v1/issues/${d.issueKey}/worklogs`, {
+                            minutes: Number(worklogMinutes),
+                            comment: worklogComment || undefined,
+                          }),
+                        '工时已登记',
+                      );
+                      if (ok !== undefined) {
+                        setWorklogMinutes('');
+                        setWorklogComment('');
+                        reload();
+                      }
+                    }}
+                  >
+                    登记工时
+                  </button>
+                </div>
+                {worklogAction.error && <ErrorText>{worklogAction.error}</ErrorText>}
               </section>
 
               {/* 进度汇报 */}
@@ -283,10 +473,10 @@ export function IssueDrawer({
                 </div>
               </section>
 
-              {/* 评论 */}
+              {/* 评论（Markdown 渲染 + @提及） */}
               <section>
                 <h3 className="mb-1 text-xs font-semibold tracking-wide text-slate-400">
-                  评论（agent 的结构化证据也在这里）
+                  评论（@账号名 可提醒成员；agent 的结构化证据也在这里）
                 </h3>
                 <div className="space-y-2">
                   {d.comments.map((c, idx) => (
@@ -297,7 +487,7 @@ export function IssueDrawer({
                           {timeAgo(c.createdAt)}
                         </span>
                       </div>
-                      <div className="mt-1 whitespace-pre-wrap text-slate-700">{c.body}</div>
+                      <Markdown text={c.body} className="mt-1" />
                       {c.evidence && (
                         <details className="mt-1">
                           <summary className="cursor-pointer text-xs text-violet-600">
@@ -319,7 +509,7 @@ export function IssueDrawer({
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
                     rows={2}
-                    placeholder="添加评论…"
+                    placeholder="添加评论…支持 Markdown；@账号名 提醒成员"
                     className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                   />
                   {commentAction.error && <ErrorText>{commentAction.error}</ErrorText>}
@@ -346,6 +536,60 @@ export function IssueDrawer({
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+/** 自定义字段行内编辑（按类型渲染控件）。 */
+function FieldRow({
+  field,
+  disabled,
+  onSaved,
+}: {
+  field: IssueDetail['fields'][number];
+  disabled: boolean;
+  onSaved: (value: unknown) => Promise<unknown>;
+}) {
+  const options = (Array.isArray(field.options) ? field.options : []) as string[];
+  const [text, setText] = useState(field.value == null ? '' : String(field.value));
+
+  if (field.type === 'select') {
+    return (
+      <div className="flex items-center gap-2 text-sm">
+        <span className="w-28 shrink-0 text-xs text-slate-400">{field.name}</span>
+        <select
+          className="rounded border border-slate-200 px-2 py-1 text-xs"
+          value={text}
+          disabled={disabled}
+          onChange={(e) => {
+            setText(e.target.value);
+            void onSaved(e.target.value || null);
+          }}
+        >
+          <option value="">（未设）</option>
+          {options.map((o) => (
+            <option key={o} value={o}>
+              {o}
+            </option>
+          ))}
+        </select>
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center gap-2 text-sm">
+      <span className="w-28 shrink-0 text-xs text-slate-400">{field.name}</span>
+      <input
+        type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+        className="flex-1 rounded border border-slate-200 px-2 py-1 text-xs"
+        value={text}
+        disabled={disabled}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={() => {
+          if (text !== (field.value == null ? '' : String(field.value)))
+            void onSaved(field.type === 'number' ? Number(text) : text);
+        }}
+      />
     </div>
   );
 }

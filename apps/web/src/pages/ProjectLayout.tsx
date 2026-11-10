@@ -10,6 +10,7 @@ import {
   ExperimentOutlined,
   InboxOutlined,
   RobotOutlined,
+  SettingOutlined,
   TeamOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons';
@@ -38,6 +39,7 @@ const TABS = [
   { to: 'approvals', label: '审批', icon: AuditOutlined },
   { to: 'regressions', label: '回归', icon: ExperimentOutlined },
   { to: 'members', label: '成员', icon: TeamOutlined },
+  { to: 'settings', label: '设置', icon: SettingOutlined },
   { to: 'webhooks', label: 'Webhooks', icon: ApiOutlined },
 ];
 

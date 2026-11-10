@@ -23,16 +23,20 @@ const TYPE_LABEL: Record<string, string> = {
   'issue.assigned': '你被指派了任务',
   'issue.completed': '你关注的 issue 已完成',
   'comment.added': '你关注的 issue 有新评论',
+  'comment.mentioned': '有人在评论里 @ 了你',
   'approval.requested': '有 agent 动作待你审批',
   'approval.decided': '你的审批请求有结果',
+  'report.published': '替身发布了新报告',
 };
 
 const TYPE_ICON: Record<string, typeof BellOutlined> = {
   'issue.assigned': UserAddOutlined,
   'issue.completed': CheckCircleOutlined,
   'comment.added': MessageOutlined,
+  'comment.mentioned': MessageOutlined,
   'approval.requested': AuditOutlined,
   'approval.decided': FileProtectOutlined,
+  'report.published': BellOutlined,
 };
 
 /** 顶栏通知铃铛：30s 轮询未读数；下拉面板可跳转对应 issue。 */

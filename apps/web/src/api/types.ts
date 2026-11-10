@@ -64,7 +64,9 @@ export interface IssueListItem {
   labels: string[];
   parent: string | null;
   sprint: { id: string; name: string } | null;
+  release: { id: string; name: string; status: string } | null;
   storyPoints: number | null;
+  estimateMinutes: number | null;
   dueDate: string | null;
   fingerprint: string | null;
   environment: string | null;
@@ -91,6 +93,115 @@ export interface IssueDetail extends IssueListItem {
     createdAt: string;
   }>;
   links: Array<{ type: string; from: string; to: string }>;
+  attachments: Array<{
+    id: string;
+    name: string;
+    url: string;
+    mimeType: string | null;
+    sizeBytes: number | null;
+    uploadedBy: string;
+    createdAt: string;
+  }>;
+  fields: Array<{
+    fieldId: string;
+    name: string;
+    type: 'text' | 'number' | 'date' | 'select';
+    options: unknown;
+    value: unknown;
+  }>;
+  worklogs: Array<{
+    id: string;
+    actor: string;
+    displayName: string;
+    minutes: number;
+    spentAt: string;
+    comment: string | null;
+  }>;
+  worklogTotal: number;
+}
+
+/* ---------------- M6 新类型 ---------------- */
+
+export interface CustomFieldItem {
+  id: string;
+  name: string;
+  type: 'text' | 'number' | 'date' | 'select';
+  options: unknown;
+  appliesTo: unknown;
+  sortOrder: number;
+}
+
+export interface ReleaseItem {
+  id: string;
+  name: string;
+  status: 'planned' | 'released' | 'archived';
+  releaseDate: string | null;
+  description: string | null;
+  totalIssues: number;
+  doneIssues: number;
+  createdAt: string;
+}
+
+export interface SavedFilterItem {
+  id: string;
+  name: string;
+  query: Record<string, unknown>;
+  shared: boolean;
+  owner: string;
+  mine: boolean;
+}
+
+export interface MyWorkItem {
+  issueKey: string;
+  title: string;
+  type: IssueType;
+  state: string;
+  stateCategory: StateCategory;
+  priority: Priority;
+  projectKey: string;
+  projectName: string;
+  updatedAt: string;
+}
+
+export interface MyWorkResp {
+  assigned: MyWorkItem[];
+  watching: MyWorkItem[];
+  reported: MyWorkItem[];
+}
+
+export interface AgileReport {
+  cycleTimes: Array<{
+    issueKey: string;
+    title: string;
+    type: IssueType;
+    doneAt: string;
+    cycleDays: number;
+  }>;
+  cfd: Array<{ date: string; todo: number; inProgress: number; done: number }>;
+  epics: Array<{ key: string; title: string; total: number; done: number }>;
+}
+
+export interface InstanceStats {
+  users: number;
+  activeProjects: number;
+  issues: number;
+  activeTokens: number;
+  attachments: { count: number; totalBytes: number };
+  activity7d: number;
+  mailConfigured: boolean;
+}
+
+export interface WorkflowEditorData {
+  issueType: IssueType;
+  name: string;
+  states: Array<{
+    id: string;
+    name: string;
+    category: StateCategory;
+    isInitial: boolean;
+    sortOrder: number;
+  }>;
+  transitions: Array<{ from: string | null; to: string }>;
 }
 
 export interface ActivityItem {
