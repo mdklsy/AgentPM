@@ -44,6 +44,33 @@ export {
   watchIssue,
 } from './services/issue.service.js';
 export { addComment, reportProgress } from './services/comment.service.js';
+export {
+  addAttachment,
+  deleteAttachment,
+  getAttachment,
+  listAttachments,
+} from './services/attachment.service.js';
+export {
+  createField,
+  deleteField,
+  listFields,
+  requireProjectAdmin,
+  setFieldValues,
+  updateField,
+} from './services/fields.service.js';
+export {
+  createRelease,
+  deleteRelease,
+  listReleases,
+  updateRelease,
+} from './services/release.service.js';
+export { addWorklog, listWorklogs } from './services/worklog.service.js';
+export { myWork } from './services/mywork.service.js';
+export { createFilter, deleteFilter, listFilters } from './services/filters.service.js';
+export { agileReport } from './services/agile-report.service.js';
+export { getWorkflow, replaceWorkflow } from './services/workflow-manage.service.js';
+export { instanceStats } from './services/admin-stats.service.js';
+export { mailConfigured, notificationMail, queueMail, setMailSender } from './services/mailer.js';
 export { fileBugInternal, reportBug } from './services/bug.service.js';
 export { getRun, listRuns, submitRegression } from './services/regression.service.js';
 export { decideApproval, listApprovals } from './services/approval.service.js';

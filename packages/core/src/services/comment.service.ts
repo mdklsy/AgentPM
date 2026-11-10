@@ -19,6 +19,12 @@ async function resolveIssue(ctx: Ctx, issueKey: string) {
 
 export async function addComment(ctx: Ctx, issueKey: string, input: CreateCommentInput) {
   const issue = await resolveIssue(ctx, issueKey);
+  const projectKey = (
+    await ctx.db.project.findUniqueOrThrow({
+      where: { id: issue.projectId },
+      select: { key: true },
+    })
+  ).key;
   const comment = await ctx.db.comment.create({
     data: {
       issueId: issue.id,
@@ -36,18 +42,31 @@ export async function addComment(ctx: Ctx, issueKey: string, input: CreateCommen
     detail: { hasEvidence: !!input.evidence },
   });
   emitWebhook(ctx, 'comment.added', {
-    projectKey: (
-      await ctx.db.project.findUniqueOrThrow({
-        where: { id: issue.projectId },
-        select: { key: true },
-      })
-    ).key,
+    projectKey,
     issueKey,
     author: comment.author.name,
     authorType: comment.author.type,
   });
   const audience = await issueAudience(ctx, issue);
   await notify(ctx, audience, 'comment.added', { issueKey, author: comment.author.name });
+
+  // @提及（M6）：解析 body 中的 @账号名，限项目成员内匹配，单独提醒
+  const mentioned = [...new Set(input.body.matchAll(/@([a-z][a-z0-9-]{1,63})/g))]
+    .map((m) => m[1]!)
+    .filter((n) => n !== comment.author.name);
+  if (mentioned.length) {
+    const members = await ctx.db.member.findMany({
+      where: { projectId: issue.projectId, actor: { name: { in: mentioned }, isActive: true } },
+      select: { actorId: true },
+    });
+    if (members.length)
+      await notify(
+        ctx,
+        members.map((m) => m.actorId),
+        'comment.mentioned',
+        { issueKey, projectKey, title: issue.title, by: comment.author.name },
+      );
+  }
   return comment;
 }
 

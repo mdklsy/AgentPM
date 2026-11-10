@@ -20,6 +20,7 @@ const ISSUE_INCLUDE = {
   labels: { include: { label: { select: { name: true, color: true } } } },
   parentIssue: { select: { issueKey: true, title: true } },
   sprint: { select: { id: true, name: true, status: true } },
+  release: { select: { id: true, name: true, status: true } },
 } satisfies Prisma.IssueInclude;
 
 export type IssueDetail = Prisma.IssueGetPayload<{ include: typeof ISSUE_INCLUDE }>;
@@ -38,7 +39,11 @@ export function serializeIssue(i: IssueDetail) {
     labels: i.labels.map((l) => l.label.name),
     parent: i.parentIssue?.issueKey ?? null,
     sprint: i.sprint ? { id: i.sprint.id, name: i.sprint.name } : null,
+    release: i.release
+      ? { id: i.release.id, name: i.release.name, status: i.release.status }
+      : null,
     storyPoints: i.storyPoints,
+    estimateMinutes: i.estimateMinutes,
     dueDate: i.dueDate,
     fingerprint: i.fingerprint,
     environment: i.environment,
@@ -111,6 +116,16 @@ export async function createIssue(
       assigneeId = a.id;
     }
 
+    let releaseId: string | undefined;
+    if (input.releaseId) {
+      const r = await tx.release.findFirst({
+        where: { id: input.releaseId, projectId: project.id },
+        select: { id: true },
+      });
+      if (!r) throw AppError.badRequest('版本不存在或不属于本项目', 'RELEASE_NOT_FOUND');
+      releaseId = r.id;
+    }
+
     const issue = await tx.issue.create({
       data: {
         projectId: project.id,
@@ -130,6 +145,8 @@ export async function createIssue(
         sprintId: input.sprintId,
         fingerprint: input.fingerprint,
         environment: input.environment,
+        releaseId,
+        estimateMinutes: input.estimateMinutes,
       },
     });
 
@@ -194,11 +211,20 @@ export async function searchIssues(ctx: Ctx, projectKey: string, query: SearchIs
   if (query.stateCategory) where.state = { category: query.stateCategory };
   if (query.assignee === 'none') where.assigneeId = null;
   else if (query.assignee) where.assignee = { name: query.assignee };
+  if (query.priority)
+    where.priority = {
+      in: query.priority
+        .split(',')
+        .map((x) => x.trim())
+        .filter(Boolean) as never,
+    };
   if (query.reporter) where.reporter = { name: query.reporter };
   if (query.label) where.labels = { some: { label: { name: query.label } } };
   if (query.parent) where.parentIssue = { issueKey: query.parent };
   if (query.sprintId === 'none') where.sprintId = null;
   else if (query.sprintId) where.sprintId = query.sprintId;
+  if (query.releaseId === 'none') where.releaseId = null;
+  else if (query.releaseId) where.releaseId = query.releaseId;
   if (query.q) {
     const like = `%${query.q.replace(/[%_]/g, (m) => `\\${m}`)}%`;
     where.OR = [{ title: { contains: like } }, { description: { contains: like } }];
@@ -224,7 +250,7 @@ export async function searchIssues(ctx: Ctx, projectKey: string, query: SearchIs
 
 export async function getIssue(ctx: Ctx, issueKey: string) {
   const issue = await assertIssueAccess(ctx, issueKey);
-  const [comments, progressReports, links] = await Promise.all([
+  const [comments, progressReports, links, attachments, fieldValues, worklogs] = await Promise.all([
     ctx.db.comment.findMany({
       where: { issueId: issue.id },
       orderBy: { createdAt: 'asc' },
@@ -243,7 +269,22 @@ export async function getIssue(ctx: Ctx, issueKey: string) {
         toIssue: { select: { issueKey: true } },
       },
     }),
+    ctx.db.attachment.findMany({
+      where: { issueId: issue.id },
+      orderBy: { createdAt: 'desc' },
+      include: { uploadedBy: { select: { name: true } } },
+    }),
+    ctx.db.issueFieldValue.findMany({
+      where: { issueId: issue.id },
+      include: { field: { select: { id: true, name: true, type: true, options: true } } },
+    }),
+    ctx.db.worklog.findMany({
+      where: { issueId: issue.id },
+      orderBy: { spentAt: 'desc' },
+      include: { actor: { select: { name: true, displayName: true } } },
+    }),
   ]);
+  const worklogTotal = worklogs.reduce((s, w) => s + w.minutes, 0);
   return {
     ...serializeIssue(issue),
     comments: comments.map((c) => ({
@@ -266,11 +307,43 @@ export async function getIssue(ctx: Ctx, issueKey: string) {
       from: l.fromIssue.issueKey,
       to: l.toIssue.issueKey,
     })),
+    attachments: attachments.map((a) => ({
+      id: a.id,
+      name: a.name,
+      url: a.url,
+      mimeType: a.mimeType,
+      sizeBytes: a.sizeBytes,
+      uploadedBy: a.uploadedBy.name,
+      createdAt: a.createdAt,
+    })),
+    fields: fieldValues.map((fv) => ({
+      fieldId: fv.field.id,
+      name: fv.field.name,
+      type: fv.field.type,
+      options: fv.field.options,
+      value: fv.value,
+    })),
+    worklogs: worklogs.map((w) => ({
+      id: w.id,
+      actor: w.actor.name,
+      displayName: w.actor.displayName,
+      minutes: w.minutes,
+      spentAt: w.spentAt,
+      comment: w.comment,
+    })),
+    worklogTotal,
   };
 }
 
 export async function updateIssue(ctx: Ctx, issueKey: string, input: UpdateIssueInput) {
   const issue = await assertIssueAccess(ctx, issueKey, 'MEMBER');
+  // 先校验再落库：releaseId 必须属于同一项目（避免外键 500）
+  if (input.releaseId) {
+    const release = await ctx.db.release.findFirst({
+      where: { id: input.releaseId, projectId: issue.projectId },
+    });
+    if (!release) throw AppError.badRequest('版本不存在或不属于本项目', 'RELEASE_NOT_FOUND');
+  }
   await ctx.db.issue.update({
     where: { id: issue.id },
     data: {
@@ -279,6 +352,8 @@ export async function updateIssue(ctx: Ctx, issueKey: string, input: UpdateIssue
       ...(input.priority !== undefined ? { priority: input.priority } : {}),
       ...(input.storyPoints !== undefined ? { storyPoints: input.storyPoints } : {}),
       ...(input.dueDate !== undefined ? { dueDate: input.dueDate } : {}),
+      ...(input.estimateMinutes !== undefined ? { estimateMinutes: input.estimateMinutes } : {}),
+      ...(input.releaseId !== undefined ? { releaseId: input.releaseId } : {}),
     },
   });
   if (input.labelNames) {
@@ -431,7 +506,15 @@ export async function transitionIssue(
   });
   if (target.category === 'DONE' && !wasDone) {
     const audience = await issueAudience(ctx, issue);
-    await notify(ctx, audience, 'issue.completed', { issueKey, title: issue.title });
+    const project = await ctx.db.project.findUniqueOrThrow({
+      where: { id: issue.projectId },
+      select: { key: true },
+    });
+    await notify(ctx, audience, 'issue.completed', {
+      projectKey: project.key,
+      issueKey,
+      title: issue.title,
+    });
   }
   return {
     status: 'done',
@@ -469,7 +552,15 @@ export async function assignIssue(ctx: Ctx, issueKey: string, assigneeName: stri
     issueKey,
     assignee: assigneeName,
   });
-  await notify(ctx, [assigneeId], 'issue.assigned', { issueKey, title: issue.title });
+  const project = await ctx.db.project.findUniqueOrThrow({
+    where: { id: issue.projectId },
+    select: { key: true },
+  });
+  await notify(ctx, [assigneeId], 'issue.assigned', {
+    projectKey: project.key,
+    issueKey,
+    title: issue.title,
+  });
   return serializeIssue(await getIssueOr404(ctx, issueKey));
 }
 

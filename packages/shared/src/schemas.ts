@@ -159,6 +159,10 @@ export const CreateIssueSchema = z
     fingerprint: z.string().min(3).max(191).optional(),
     environment: z.string().max(255).optional(),
     sprintId: z.string().min(1).optional(),
+    /** 版本 id（M6） */
+    releaseId: z.string().min(1).optional(),
+    /** 工时预估（分钟，M6） */
+    estimateMinutes: z.number().int().min(0).max(1_000_000).optional(),
   })
   .refine((v) => v.type !== 'SUBTASK' || !!v.parentIssueKey, {
     message: 'SUBTASK 必须指定 parentIssueKey',
@@ -173,8 +177,42 @@ export const UpdateIssueSchema = z.object({
   storyPoints: z.number().int().min(0).max(200).nullable().optional(),
   dueDate: z.coerce.date().nullable().optional(),
   labelNames: z.array(z.string().min(1).max(64)).max(20).optional(),
+  /** 版本 id；null = 移出版本（M6） */
+  releaseId: z.string().min(1).nullable().optional(),
+  /** 工时预估分钟；null = 清除（M6） */
+  estimateMinutes: z.number().int().min(0).max(1_000_000).nullable().optional(),
 });
 export type UpdateIssueInput = z.infer<typeof UpdateIssueSchema>;
+
+/* ---------------------------------------------------- worklog（M6 工时） */
+
+export const AddWorklogSchema = z.object({
+  minutes: z.number().int().min(1).max(100_000),
+  spentAt: z.coerce.date().optional(),
+  comment: z.string().max(1000).optional(),
+});
+export type AddWorklogInput = z.infer<typeof AddWorklogSchema>;
+
+/* ---------------------------------------------------- bulk（M6 批量操作） */
+
+export const BulkIssueSchema = z
+  .object({
+    issueKeys: z.array(z.string().regex(ISSUE_KEY_REGEX)).min(1).max(100),
+    action: z.enum(['transition', 'assign', 'priority', 'sprint']),
+    toState: z.string().min(1).max(64).optional(),
+    assigneeName: z.string().max(64).nullable().optional(),
+    priority: PrioritySchema.optional(),
+    sprintId: z.string().min(1).nullable().optional(),
+  })
+  .refine(
+    (v) =>
+      (v.action === 'transition' && !!v.toState) ||
+      (v.action === 'assign' && v.assigneeName !== undefined) ||
+      (v.action === 'priority' && !!v.priority) ||
+      (v.action === 'sprint' && v.sprintId !== undefined),
+    { message: 'action 与对应参数不匹配' },
+  );
+export type BulkIssueInput = z.infer<typeof BulkIssueSchema>;
 
 export const TransitionIssueSchema = z.object({
   toState: z.string().min(1).max(64),
@@ -200,9 +238,11 @@ export const SearchIssuesQuerySchema = z.object({
   stateCategory: z.enum(['TODO', 'IN_PROGRESS', 'DONE']).optional(),
   assignee: z.string().max(64).optional(), // actor name 或 "none"
   reporter: z.string().max(64).optional(),
+  priority: z.string().max(20).optional(), // 逗号分隔多个，如 "P0,P1"
   label: z.string().max(64).optional(),
   parent: z.string().regex(ISSUE_KEY_REGEX).optional(),
   sprintId: z.string().optional(),
+  releaseId: z.string().optional(), // 或 "none"=未设版本
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
   sort: z

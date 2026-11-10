@@ -17,6 +17,8 @@ export interface Ctx {
   userAgent?: string;
   /** source=MCP 时记录的工具名 */
   mcpTool?: string;
+  /** 实例对外地址（M6）：通知邮件里的链接用它拼 */
+  appUrl?: string;
 }
 
 /** 角色等级：VIEWER < AGENT/MEMBER < ADMIN < OWNER */
