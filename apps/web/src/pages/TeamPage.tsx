@@ -23,8 +23,10 @@ import {
 import { useAuth } from '../auth.js';
 
 /**
- * 团队成员（M5.5）：实例级花名册，独立于项目。
- * 管理员：增删改、重置密码、启停、管理员开关、传头像；所有人：自己的头像与 API Token。
+ * 团队成员（M5.5，M7 语义更新）：实例级花名册，独立于项目。
+ * 身份模型：每个账号天然拥有两条操作渠道——账号密码进网页（WEB 手动）、
+ * 个人 Token 走 REST/MCP（自动化）。系统只在「行为/渠道」上区分，不在身份上割裂；
+ * 「独立机器人」是可选项，仅当需要给第三方 bot 建立隔离身份（独立信誉/权限上限）时才创建。
  */
 
 interface UserRow {
@@ -51,7 +53,7 @@ interface TokenRow {
 
 const TYPE_LABEL: Record<ActorType, string> = {
   HUMAN: '人类',
-  AGENT: 'Agent',
+  AGENT: '独立机器人',
   AVATAR: 'PM 替身',
 };
 
@@ -175,6 +177,9 @@ export function TeamPage() {
         {action.error && <ErrorText>{action.error}</ErrorText>}
         {action.message && <SuccessText>{action.message}</SuccessText>}
 
+        {/* 我的自动化渠道（个人 Token）——主路径，排在花名册之前 */}
+        <TokenCard onMinted={setMintedToken} />
+
         {/* 花名册 */}
         <Card className="p-4">
           <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -287,8 +292,6 @@ export function TeamPage() {
           />
         </Card>
 
-        {/* 我的 API Token */}
-        <TokenCard onMinted={setMintedToken} />
       </div>
 
       {/* 添加用户 */}
@@ -528,9 +531,9 @@ function TokenCard({ onMinted }: { onMinted: (token: string) => void }) {
     <Card className="p-4">
       <div className="mb-3 flex items-center gap-2">
         <UserOutlined className="text-slate-400" aria-hidden />
-        <h2 className="font-semibold text-slate-800">我的 API Token</h2>
+        <h2 className="font-semibold text-slate-800">我的自动化渠道（个人 Token）</h2>
         <span className="text-xs text-slate-400">
-          给脚本或 MCP 客户端用的个人密钥（明文只显示一次）
+          以你本人的身份在 REST/MCP 里自动操作——审计记为 token 渠道，权限等同你本人
         </span>
         <button
           className="ml-auto inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-700"
@@ -544,7 +547,8 @@ function TokenCard({ onMinted }: { onMinted: (token: string) => void }) {
       {action.message && <SuccessText>{action.message}</SuccessText>}
       {tokens.data?.tokens.length === 0 && (
         <p className="text-xs text-slate-400">
-          还没有 token——新建一个即可在 REST/MCP 里以你本人的身份操作
+          还没有 token——新建一个，把明文填进 MCP 配置或脚本，就能以你的身份自动化干活。
+          日常自动化推荐用这条渠道，无需创建独立机器人。
         </p>
       )}
       <div className="space-y-2">

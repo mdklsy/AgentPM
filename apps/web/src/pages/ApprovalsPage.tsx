@@ -15,7 +15,7 @@ import {
   timeAgo,
 } from '../components/ui.js';
 
-/** 审批收件箱：agent 被策略拦截的高危动作（提 bug / 完成流转）在这里放行或拒绝 */
+/** 审批收件箱：token 渠道（自动化）被策略拦截的高危动作（提 bug / 完成流转）在这里放行或拒绝 */
 export function ApprovalsPage() {
   const { projectKey } = useOutletContext<ProjectPageCtx>();
   const [status, setStatus] = useState<'PENDING' | 'APPROVED' | 'REJECTED'>('PENDING');
@@ -57,7 +57,7 @@ export function ApprovalsPage() {
       {data && data.approvals.length === 0 && (
         <EmptyState>
           {status === 'PENDING'
-            ? '没有待审批的请求——agent 的高危动作被策略拦截后会出现在这里'
+            ? '没有待审批的请求——自动化渠道的高危动作被策略拦截后会出现在这里'
             : '暂无记录'}
         </EmptyState>
       )}

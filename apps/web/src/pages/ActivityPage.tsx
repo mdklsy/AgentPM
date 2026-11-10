@@ -9,7 +9,7 @@ import { ActivityFeed } from '../components/ActivityFeed.js';
 const FILTERS: Array<{ value: ActivitySource | null; label: string }> = [
   { value: null, label: '全部' },
   { value: 'WEB', label: '网页' },
-  { value: 'MCP', label: 'Agent(MCP)' },
+  { value: 'MCP', label: 'MCP 自动化' },
   { value: 'API', label: 'API' },
   { value: 'SYSTEM', label: '系统/审批' },
 ];
@@ -38,7 +38,7 @@ export function ActivityPage() {
           </button>
         ))}
         <span className="ml-auto text-xs text-slate-400">
-          实时流：人和 agent 的动作即刻出现在这里
+          实时流：网页手动与 token 自动化的动作即刻出现在这里
         </span>
       </div>
       <div

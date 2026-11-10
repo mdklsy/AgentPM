@@ -63,9 +63,13 @@ pnpm dev                  # API → http://127.0.0.1:3000 ，OpenAPI 文档 → 
 pnpm --filter @agentpm/web dev   # Web UI → http://localhost:5173（登录 admin）
 ```
 
-### 3. 让你的 Agent 接入 MCP
+### 3. 接入 MCP：推荐用你的个人 Token（身份即渠道）
 
-任何支持 MCP 的客户端（ZCode / Claude Desktop / Cursor / 自研 agent）一行配置：
+系统不在身份上区分人和 agent——**每个账号天然拥有两条操作渠道**：账号密码进网页（WEB 手动），
+个人 Token 走 REST/MCP（自动化，审计记为 token 渠道，权限等同本人）。日常自动化直接用个人 Token：
+
+1. 登录 Web UI → 团队成员 → **我的自动化渠道（个人 Token）** → 新建（明文只显示一次）
+2. 把 token 填进任意 MCP 客户端（ZCode / Claude Desktop / Cursor / 自研 agent）：
 
 ```json
 {
@@ -84,13 +88,16 @@ pnpm --filter @agentpm/web dev   # Web UI → http://localhost:5173（登录 adm
 }
 ```
 
-> `agentpm-mcp` 尚未发布到 npm（M6 计划）。发布前的等价本地用法：
+> `agentpm-mcp` 尚未发布到 npm（M7 计划）。发布前的等价本地用法：
 >
 > ```bash
 > node apps/mcp-stdio/src/main.ts --url http://127.0.0.1:3000/v1/mcp --token apm_xxx
 > ```
 >
 > （需 Node ≥ 23，或把 `node` 换成 `npx tsx`。）
+>
+> **独立机器人（可选）**：仅当需要给第三方 bot 建立隔离身份（独立 token 上限、独立信誉分、独立心跳）时，
+> 才在「项目 → Agent → 创建独立机器人」单独建身份；否则一切自动化都以本人 + 个人 Token 的形态出现。
 
 或直连 Streamable HTTP：`POST http://127.0.0.1:3000/v1/mcp`，`Authorization: Bearer apm_xxx`（每次请求需带 `Accept: application/json, text/event-stream`，官方 SDK 客户端默认满足）。
 

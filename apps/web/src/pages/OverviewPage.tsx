@@ -60,7 +60,7 @@ export function OverviewPage() {
       <Card className="p-4">
         <h2 className="font-semibold text-slate-700">负载分布（未完成）</h2>
         <p className="text-xs text-slate-400">
-          未指派 {data.workload.unassigned} 个 · 紫色 = agent / 灰色 = 人类
+          未指派 {data.workload.unassigned} 个 · 紫色 = 独立机器人 / 灰色 = 人类成员
         </p>
         <div className="mt-3 space-y-2">
           {data.workload.members.map((m) => {
@@ -125,7 +125,7 @@ export function OverviewPage() {
             </div>
           ))}
           <span className="ml-auto text-sm text-slate-500">
-            共 {data.activity7d.total} 条 · WEB=网页 · API=token · MCP=agent · SYSTEM=审批代执行
+            共 {data.activity7d.total} 条 · WEB=网页手动 · API/MCP=token 自动化 · SYSTEM=审批代执行
           </span>
         </div>
       </Card>

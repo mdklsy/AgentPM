@@ -101,7 +101,7 @@ export function ProjectLayout() {
         </span>
         <span className="font-semibold text-slate-800">{data.project.name}</span>
         <span className="ml-2 hidden rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500 sm:inline">
-          agent 策略：
+          自动化策略（token 渠道）：
           {data.project.settings.agentPolicy.bugCreate === 'approval' ? '提bug需审批 · ' : ''}
           {data.project.settings.agentPolicy.completeTransition === 'approval'
             ? '完成需审批'

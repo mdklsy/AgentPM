@@ -56,7 +56,7 @@ export function MembersPage() {
                 setOpenList(true);
               }}
               onFocus={() => setOpenList(true)}
-              placeholder="搜索成员（全局花名册：人或 agent）"
+              placeholder="搜索成员（全局花名册：人类或独立机器人）"
               className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm"
             />
             {openList && hits.length > 0 && (

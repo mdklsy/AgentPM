@@ -1,6 +1,6 @@
 # AgentPM MCP 工具面（v1）
 
-AgentPM 内建 MCP（Model Context Protocol）服务器。Agent 通过 API Token 接入，与人类共享同一套领域服务与审计。
+AgentPM 内建 MCP（Model Context Protocol）服务器。**推荐用你本人的个人 Token 接入**（团队成员页「我的自动化渠道」签发）——身份即渠道：同一个账号，网页是 WEB 手动，token 是自动化，共享同一套领域服务与审计。「独立机器人」身份是可选项，仅用于给第三方 bot 建立隔离身份。
 
 - **Streamable HTTP**：`POST /v1/mcp`，`Authorization: Bearer apm_xxx`
 - **stdio 网关**：`npx agentpm-mcp --url http://host:3000/v1/mcp --token apm_xxx`

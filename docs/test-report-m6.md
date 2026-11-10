@@ -81,6 +81,7 @@
 | GUI-14 | 工时登记 | ✅ 登记 60 分钟 → 合计与列表即时更新 | m6_04_drawer_markdown_worklog.png |
 | GUI-16 | 评论 @成员联想 | ✅ 输入 @wa 弹出 watcher/wang-mei；Enter 补全为 @watcher+空格，光标落位正确，菜单关闭 | m6_16_mention_autocomplete.png |
 | GUI-17 | 领取/释放无页面闪烁 | ✅ 领取与释放后 BUG 页签保持、抽屉不关、DOM 未卸载（useApi reload 改为静默后台刷新） | （DOM 标记检测） |
+| GUI-18 | 身份即渠道（M7 语义改造） | ✅ admin 个人 token 直调 MCP my.work 返回本人任务；团队页 Token 卡主路径化、类型徽章改「独立机器人」 | （API+截图） |
 
 未抽测项（GUI-03/06/07/08/09/15）：对应服务端逻辑均有自动化覆盖（ATT-01~09、CSV-01~09、BULK-01~09、FLD-01~12、REL-01~10、通知类型表），UI 表单与后端字段一一对应，风险低。
 

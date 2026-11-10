@@ -14,7 +14,8 @@ import {
   timeAgo,
 } from '../components/ui.js';
 
-/** Agent 管理：创建（token 仅显示一次）、加入项目、心跳与在办情况 */
+/** 独立机器人管理（可选）：给第三方 bot 建立隔离身份（独立 token/信誉/心跳）。
+ * 日常自动化无需来这里——直接在团队成员页用你本人的个人 Token 接入 MCP。 */
 export function AgentsPage() {
   const { projectKey, detail, reloadDetail } = useOutletContext<ProjectPageCtx>();
   const { data, loading, error, reload } = useApi<{ agents: AgentItem[] }>('/v1/agents');
@@ -30,14 +31,17 @@ export function AgentsPage() {
     <div className="mx-auto max-w-4xl">
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="font-semibold text-slate-700">Agent 管理</h2>
-          <p className="text-xs text-slate-400">创建 agent → 复制 token → 让它以 MCP 接入本项目</p>
+          <h2 className="font-semibold text-slate-700">独立机器人（可选）</h2>
+          <p className="text-xs text-slate-400">
+            给第三方 bot 建立隔离身份：独立 token、独立信誉分、独立心跳。
+            日常自动化请直接用你本人的个人 Token（团队成员页），无需创建机器人。
+          </p>
         </div>
         <button
           className="rounded-lg bg-violet-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-violet-700"
           onClick={() => setCreating(true)}
         >
-          + 创建 Agent
+          + 创建独立机器人
         </button>
       </div>
 
